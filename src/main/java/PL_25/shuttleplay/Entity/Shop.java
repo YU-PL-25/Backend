@@ -1,0 +1,19 @@
+package PL_25.shuttleplay.Entity;
+
+import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
+
+@Getter
+@Setter
+public class Shop {
+    @Id
+    public long shopId;
+
+    private String shopName;
+    private String shopURL;
+    private List<Product> productList;
+    private Location location;;
+}
