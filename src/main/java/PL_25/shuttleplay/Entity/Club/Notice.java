@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Setter
 public class Notice {
     @Id
-    public long noticeId;
+    public Long noticeId;
 
     private String title;
     private String content;

@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class Payment {
     @Id
-    public long paymentId;
+    public Long paymentId;
 
     private String method;  // 결제 수단
     private boolean isPaid; // 결제 완료 여부

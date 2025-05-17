@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Setter
 public class ClubSchedule {
     @Id
-    public long scheduleId;
+    public Long scheduleId;
 
     private LocalDate scheduleDate;
     private String description;

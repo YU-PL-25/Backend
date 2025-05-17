@@ -11,7 +11,7 @@ import java.util.List;
 @Setter
 public class Club {
     @Id
-    private long clubId;
+    private Long clubId;
 
     private String name;
     private List<NormalUser> members;

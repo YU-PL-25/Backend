@@ -22,7 +22,7 @@ enum TimeSlot {
 @Setter
 public class Reservation {
     @Id
-    public long reservationId;
+    public Long reservationId;
 
     private User reservationUser;   // 예약을 한 사용자(=신청한사람)
     private Court reservationCourt; // 어느 구장(코트)를 예약한건지
