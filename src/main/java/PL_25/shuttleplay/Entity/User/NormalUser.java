@@ -10,8 +10,8 @@ import lombok.Setter;
 @Getter
 @Entity
 public class NormalUser extends User {
-    @Id
-    public long userId;
+//    @Id
+//    public long userId;
 
     private String name;
     private String nickname; // 사용자 닉네임
