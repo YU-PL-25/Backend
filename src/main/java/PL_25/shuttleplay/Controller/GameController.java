@@ -1,6 +1,7 @@
 package PL_25.shuttleplay.Controller;
 
 import PL_25.shuttleplay.Entity.Game.GameHistory;
+import PL_25.shuttleplay.Repository.GameHistoryRepository;
 import PL_25.shuttleplay.Service.NormalUserService;
 import PL_25.shuttleplay.dto.GameHistoryDTO;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class GameController {
     private final NormalUserService normalUserService;
+    private final GameHistoryRepository gameHistoryRepository;
 
     // 경기 결과 입력 및 MMR 점수 갱신
     @PostMapping("/result")
@@ -30,6 +32,9 @@ public class GameController {
         gameHistory.setScoreTeamA(dto.getScoreTeamA());
         gameHistory.setScoreTeamB(dto.getScoreTeamB());
         gameHistory.setCompleted(dto.isCompleted());
+        // GameHistory 먼저 저장
+        gameHistoryRepository.save(gameHistory);
+
 
         // MMR 점수 갱신
         normalUserService.updateMmr(dto.getUserId(), dto.getOpponentId(), gameHistory);
