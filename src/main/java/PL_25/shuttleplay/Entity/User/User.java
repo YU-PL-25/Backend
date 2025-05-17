@@ -12,6 +12,6 @@ import lombok.Setter;
 public abstract class User {
     @Id
     @GeneratedValue
-    private String id;
+    private Long id;
     private String password;
 }
