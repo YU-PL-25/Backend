@@ -2,13 +2,14 @@ package PL_25.shuttleplay.Entity.User;
 
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
-@Entity
+@Entity(name = "normal_user")
 public class NormalUser extends User {
 //    @Id
 //    public long userId;
@@ -20,14 +21,17 @@ public class NormalUser extends User {
     private String phone;
     private String rank;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "mmr_id")
     private MMR mmr;    // mmr 점수
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "profile_id")
     private Profile profile;    // 개인 게임 정보를 담은 프로필 객체
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "game_room_id")
+    @JsonBackReference
     private GameRoom gameRoom; // 참여 게임방
 
     private String role;    // admin(?? 관리자), normal(일반 사용자), manager(방 관리자)

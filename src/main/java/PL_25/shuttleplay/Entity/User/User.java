@@ -6,12 +6,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Entity
+@Entity(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(name = "users")
 public abstract class User {
     @Id
-    @GeneratedValue
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long userId;
     private String password;
 }

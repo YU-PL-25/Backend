@@ -2,6 +2,7 @@ package PL_25.shuttleplay.Entity.Game;
 
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.NormalUser;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,14 +25,16 @@ public class GameRoom {
     public Long gameRoomId;
 
     @OneToMany(mappedBy = "gameRoom", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<NormalUser> participants;
 
     @OneToMany(mappedBy = "gameRoomId", cascade = CascadeType.ALL)
     private List<Game> gameList;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "location_id")
     private Location location;
+
 
     private LocalDate date;
     private LocalTime time;
