@@ -10,7 +10,7 @@ import java.util.List;
 @Setter
 public class Shop {
     @Id
-    public long shopId;
+    public Long shopId;
 
     private String shopName;
     private String shopURL;

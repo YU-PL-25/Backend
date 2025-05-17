@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 public class JoinRequest {
     @Id
-    public long requestId;
+    public Long requestId;
 
     private User requester; // 초대를 보낸 사용자
     private boolean isApproved;

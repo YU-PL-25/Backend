@@ -12,7 +12,7 @@ import java.util.List;
 @Setter
 public class Post {
     @Id
-    public long postId;
+    public Long postId;
 
     private String title;
     private String category;

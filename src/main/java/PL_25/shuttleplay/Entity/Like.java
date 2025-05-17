@@ -4,7 +4,7 @@ import jakarta.persistence.Id;
 
 public class Like {
     @Id
-    public long likeId;
+    public Long likeId;
 
     // @Joincol 해야됨
     private String userId;  // 좋아요 누른 사람

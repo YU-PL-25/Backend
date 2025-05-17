@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 public class Product {
     @Id
-    public long productId;
+    public Long productId;
 
     @ManyToOne
     @JoinColumn(name = "shopId", nullable = false)

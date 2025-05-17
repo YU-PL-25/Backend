@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 public class Court {
     @Id
-    public long courtId;
+    public Long courtId;
 
     private String courtName;
     private Location courtLoc;

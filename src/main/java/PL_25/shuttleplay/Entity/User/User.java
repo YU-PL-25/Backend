@@ -1,12 +1,16 @@
 package PL_25.shuttleplay.Entity.User;
 
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class User {
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class User {
+    @Id
+    @GeneratedValue
     private String id;
     private String password;
 }
