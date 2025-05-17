@@ -1,4 +1,4 @@
-package PL_25.shuttleplay.Entity;
+package PL_25.shuttleplay.Entity.Shop;
 
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
