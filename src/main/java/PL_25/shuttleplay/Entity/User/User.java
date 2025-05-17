@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@Table(name = "users")
 public abstract class User {
     @Id
     @GeneratedValue
