@@ -1,6 +1,7 @@
 package PL_25.shuttleplay.Repository;
 
 import PL_25.shuttleplay.Entity.Game.Game;
+import PL_25.shuttleplay.Entity.Game.GameRoom;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

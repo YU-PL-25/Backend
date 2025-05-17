@@ -1,6 +1,7 @@
 package PL_25.shuttleplay.Repository;
 
 import PL_25.shuttleplay.Entity.Game.GameRoom;
+import PL_25.shuttleplay.Entity.Location;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;

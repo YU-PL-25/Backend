@@ -15,7 +15,9 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Builder
 @RequiredArgsConstructor
+@AllArgsConstructor
 public class GameRoom {
 
     @Id
@@ -26,7 +28,7 @@ public class GameRoom {
     @JsonManagedReference
     private List<NormalUser> participants;
 
-    @OneToMany(mappedBy = "gameRoom", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "gameRoomId", cascade = CascadeType.ALL)
     private List<Game> gameList;
 
     @ManyToOne(cascade = CascadeType.PERSIST)
