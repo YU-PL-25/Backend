@@ -1,6 +1,8 @@
 package PL_25.shuttleplay.Entity.User;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +12,8 @@ import lombok.Setter;
 @Entity
 public class MMR {
     @Id
-    public long mmrId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public Long mmrId;
 
     private int rating; // mmr 점수
     private double winRate; // 사용자의 승률

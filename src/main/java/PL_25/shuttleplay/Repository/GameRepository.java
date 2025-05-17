@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface GameRepository extends JpaRepository<Game, Long> {
     // 특정 게임방에서 진행된 경기 목록 조회
-    List<Game> findByGameRoomId(Long gameRoomId);
+    List<Game> findByGameRoom_GameRoomId(Long gameRoomId);
 }

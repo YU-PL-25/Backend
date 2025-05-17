@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface NormalUserRepository extends JpaRepository<NormalUser, Long> {
     // 게임방에 들어온 사용자들 조회
-    List<NormalUser> findAllByGameRoomId(Long gameRoomId);
+    List<NormalUser> findAllByGameRoom_GameRoomId(Long gameRoomId);
 }

@@ -35,4 +35,9 @@ public class AutoMatchRequest {
         this.mmr = mmr;
     }
 
+    public AutoMatchRequest(Profile profile, MMR mmr, NormalUser user) {
+        this.profile = profile;
+        this.mmr = mmr;
+        this.user = user;
+    }
 }
