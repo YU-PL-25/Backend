@@ -1,5 +1,7 @@
-package PL_25.shuttleplay.Entity;
+package PL_25.shuttleplay.Entity.Community;
 
+import PL_25.shuttleplay.Entity.Community.Comment;
+import PL_25.shuttleplay.Entity.Community.Like;
 import PL_25.shuttleplay.Entity.User.User;
 import jakarta.persistence.Id;
 import lombok.Getter;

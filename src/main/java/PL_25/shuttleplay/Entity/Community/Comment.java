@@ -1,4 +1,4 @@
-package PL_25.shuttleplay.Entity;
+package PL_25.shuttleplay.Entity.Community;
 
 import java.time.LocalDate;
 

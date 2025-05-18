@@ -11,15 +11,15 @@ import lombok.Setter;
 @Getter
 @Entity(name = "normal_user")
 public class NormalUser extends User {
-//    @Id
-//    public long userId;
 
     private String name;
     private String nickname; // 사용자 닉네임
     private String gender; // 성별
     private String email;
     private String phone;
-    private String rank;
+
+    @Enumerated(EnumType.STRING)
+    private Rank rank;    // 급수 (S, A, B, C)
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "mmr_id")

@@ -1,5 +1,6 @@
-package PL_25.shuttleplay.Entity;
+package PL_25.shuttleplay.Entity.Shop;
 
+import PL_25.shuttleplay.Entity.Location;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
