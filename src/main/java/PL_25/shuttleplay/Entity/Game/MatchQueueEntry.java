@@ -7,7 +7,6 @@ import PL_25.shuttleplay.Entity.User.Profile;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
@@ -17,13 +16,14 @@ import java.time.LocalTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class MatchQueueEntry {
+public class MatchQueueEntry{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "user_id")
     private NormalUser user;
 
     @ManyToOne(cascade = CascadeType.PERSIST)
@@ -43,9 +43,15 @@ public class MatchQueueEntry {
 
     @ManyToOne
     @JoinColumn(name = "game_room_id")
-    private GameRoom gameRoom; // 게임방 단위 큐
+    private GameRoom gameRoom;
 
     @Column(name = "is_prematched")
     private Boolean isPrematched = false;
 
+    @Enumerated(EnumType.STRING)
+    private MatchQueueType matchType;
+
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
 }

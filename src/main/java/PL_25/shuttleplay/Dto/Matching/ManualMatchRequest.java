@@ -1,5 +1,6 @@
 package PL_25.shuttleplay.Dto.Matching;
 
+import PL_25.shuttleplay.Entity.Location;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -15,10 +16,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ManualMatchRequest {
 
-    private List<Long> userId;       // 선택된 사용자 ID 목록
-    private boolean isLive;          // 현장매칭 여부
-    private String courtName;
-    private String courtAddress;
-    private LocalDate date;          // isLive가 false일 때(사전 매칭)만 사용
-    private LocalTime time;
+    // 선택된 사용자 ID 목록
+    private List<Long> userId;
+
+    // 위치 정보
+    private Location location;
+
+    private LocalDate date;          //  사전 매칭만 사용
+    private LocalTime time;          //  사전 매칭만 사용
+    public boolean isPreMatch(){ // 사전매칭 여부
+        return date != null && time != null;
+    }
 }
