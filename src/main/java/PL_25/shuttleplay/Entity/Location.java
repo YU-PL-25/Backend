@@ -4,11 +4,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
+@NoArgsConstructor
 public class Location {
     @Id
     @GeneratedValue()
@@ -22,5 +24,16 @@ public class Location {
     private String courtName;      // (선택된 경우) 구장명
     private String courtAddress;   // (선택된 경우) 구장주소
 
+    public Location(String courtName, String courtAddress, double latitude, double longitude) {
+        this.courtName = courtName;
+        this.courtAddress = courtAddress;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public Location(String courtName, String courtAddress) {
+        this.courtName = courtName;
+        this.courtAddress = courtAddress;
+    }
 }
 

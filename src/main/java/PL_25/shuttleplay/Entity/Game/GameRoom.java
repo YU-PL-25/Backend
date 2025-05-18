@@ -28,7 +28,8 @@ public class GameRoom {
     @JsonManagedReference
     private List<NormalUser> participants;
 
-    @OneToMany(mappedBy = "gameRoomId", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "gameRoom")
+    @JsonManagedReference("gameRoom-gameList")
     private List<Game> gameList;
 
     @ManyToOne(cascade = CascadeType.PERSIST)
