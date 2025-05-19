@@ -3,8 +3,10 @@ package PL_25.shuttleplay.Controller;
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameHistory;
 import PL_25.shuttleplay.Entity.Game.GameStatus;
+import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;
 import PL_25.shuttleplay.Repository.GameRepository;
+import PL_25.shuttleplay.Service.MMRService;
 import PL_25.shuttleplay.Service.NormalUserService;
 import PL_25.shuttleplay.dto.GameHistoryDTO;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class GameController {
     private final NormalUserService normalUserService;
     private final GameHistoryRepository gameHistoryRepository;
     private final GameRepository gameRepository;
+    private final MMRService mmrService;
 
     // 경기 종료 시 FINISHED 상태로 전환 (게임 종료하기, 스코어 입력하기)
     @PatchMapping("/{gameId}/complete")
@@ -64,7 +67,18 @@ public class GameController {
         gameRepository.save(game);
 
         // MMR 점수 갱신
-        normalUserService.updateMmr(dto.getUserId(), dto.getOpponentId(), gameHistory);
+//        normalUserService.updateMmr(dto.getUserId(), dto.getOpponentId(), gameHistory);
+
+        // Game 방장이 경기 결과를 입력하면 해당 Game에 참가중인 참가자들에게 모두 MMR 점수 반영하도록 함
+        if (game.getParticipants().size() != 2) {
+            return ResponseEntity.badRequest().body("현재는 1:1 경기만 지원됩니다.");
+        }
+        // MMR 점수 갱신 (단식)
+        Long userA = game.getParticipants().get(0).getUserId();
+        Long userB = game.getParticipants().get(1).getUserId();
+
+        normalUserService.updateMmr(userA, userB, gameHistory);
+        normalUserService.updateMmr(userB, userA, gameHistory);
 
         return ResponseEntity.ok("경기 결과가 정상 반영되었습니다.");
     }
