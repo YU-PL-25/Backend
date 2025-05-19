@@ -4,7 +4,9 @@ import PL_25.shuttleplay.Dto.Matching.AutoMatchRequest;
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Entity.Game.MatchQueueResponse;
+import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Service.AutoMatchService;
+import PL_25.shuttleplay.Service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import java.util.Map;
 public class AutoMatchController {
 
     private final AutoMatchService autoMatchService;
+    private final MessageService messageService;
 
     @PostMapping("/queue/gym")
     public ResponseEntity<Map<String, Object>> registerGymQueue(@RequestParam Long userId,
@@ -70,6 +73,16 @@ public class AutoMatchController {
         if (game == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
+
+//        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기
+//        for (NormalUser user : game.getParticipants()) {
+//            String to = user.getPhone();
+//            String text = "[셔틀플레이] " + user.getName() + "님! "
+//                    + game.getDate() + " " + game.getTime() + "에 "
+//                    + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
+//            messageService.sendMessage(to, text);
+//        }
+
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
                 "gameId", game.getGameId(),
@@ -86,6 +99,7 @@ public class AutoMatchController {
         if (game == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
+
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
                 "gameId", game.getGameId(),
