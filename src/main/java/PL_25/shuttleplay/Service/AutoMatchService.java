@@ -30,8 +30,8 @@ public class AutoMatchService {
     private final GameRoomRepository gameRoomRepository;
     private final GameRepository gameRepository;
     private final NormalUserRepository normalUserRepository;
-    private final ProfileRepository profileRepository;
-    private final MMRRepository mmrRepository;
+    private final GameHistoryRepository gameHistoryRepository;
+
 
     // 유효성 검사
     private void validateUsersBeforeMatch(List<Long> userIds, GameRoom currentRoomOrNull) {
@@ -172,7 +172,13 @@ public class AutoMatchService {
                     game.setLocation(room.getLocation());
 
                     Game savedGame = gameRepository.save(game);
-
+                    // 게임 히스토리 생성
+                    GameHistory history = new GameHistory();
+                    history.setGame(savedGame);
+                    history.setScoreTeamA(0); // 초기값
+                    history.setScoreTeamB(0);
+                    history.setCompleted(false);
+                    gameHistoryRepository.save(history);
                     for (NormalUser user : savedGame.getParticipants()) {
                         user.setCurrentGame(savedGame);
                     }
