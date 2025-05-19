@@ -28,6 +28,39 @@ public class GameController {
     private final GameRepository gameRepository;
     private final MMRService mmrService;
 
+    // 매칭된 게임(경기) 시작하기
+    @PatchMapping("/{gameId}/start")
+    public ResponseEntity<String> startGame(@PathVariable Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 gameId의 Game이 존재하지 않습니다"));
+
+        if (game.getStatus() != GameStatus.WAITING) {
+            return ResponseEntity.badRequest().body("이미 시작되었거나 유효하지 않은 상태입니다.");
+        }
+
+        game.setStatus(GameStatus.ONGOING);
+        gameRepository.save(game);
+
+        return ResponseEntity.ok("Game이 ONGOING 상태로 변경되었습니다.");
+    }
+
+    // 대기중인 매칭된 게임(경기) 취소하기
+    @PatchMapping("/{gameId}/cancel")
+    public ResponseEntity<String> cancelGame(@PathVariable Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 gameId의 Game이 존재하지 않습니다"));
+
+        if (game.getStatus() != GameStatus.WAITING) {
+            return ResponseEntity.badRequest().body("WAITING 상태의 게임만 취소할 수 있습니다.");
+        }
+
+        game.setStatus(GameStatus.CANCELLED);
+        gameRepository.save(game);
+
+        return ResponseEntity.ok("Game이 CANCELLED 상태로 변경되었습니다.");
+    }
+
+
     // 경기 종료 시 FINISHED 상태로 전환 (게임 종료하기, 스코어 입력하기)
     @PatchMapping("/{gameId}/complete")
     public ResponseEntity<String> completeGame(@PathVariable Long gameId) {
