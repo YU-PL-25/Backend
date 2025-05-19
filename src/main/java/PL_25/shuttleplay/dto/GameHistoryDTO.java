@@ -12,6 +12,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GameHistoryDTO {
+    private Long gameId;
     private Long userId;
     private Long opponentId;
     private int scoreTeamA;

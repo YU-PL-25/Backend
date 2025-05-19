@@ -1,6 +1,6 @@
 package PL_25.shuttleplay.Controller;
 
-import PL_25.shuttleplay.Dto.GameHistoryResponseDTO;
+import PL_25.shuttleplay.dto.GameHistoryResponseDTO;
 import PL_25.shuttleplay.Entity.Game.GameHistory;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;

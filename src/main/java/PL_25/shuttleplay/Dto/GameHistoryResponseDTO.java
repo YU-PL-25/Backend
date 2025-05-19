@@ -1,4 +1,4 @@
-package PL_25.shuttleplay.Dto;
+package PL_25.shuttleplay.dto;
 
 import lombok.*;
 
