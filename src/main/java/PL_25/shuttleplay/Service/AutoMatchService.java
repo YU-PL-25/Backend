@@ -51,60 +51,68 @@ public class AutoMatchService {
         }
     }
 
-    // 통합된 매칭 큐 등록
-    public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request) {
-        NormalUser user = normalUserRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"));
+   // 통합된 매칭 큐 등록
+   public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request) {
+       NormalUser user = normalUserRepository.findById(userId)
+               .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"));
 
-        if (request.getLocation() == null || request.getLocation().getCourtName() == null || request.getLocation().getCourtAddress() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "코트 이름과 주소는 필수입니다.");
-        }
+       if (request.getLocation() == null ||
+               request.getLocation().getCourtName() == null ||
+               request.getLocation().getCourtAddress() == null) {
+           throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "코트 이름과 주소는 필수입니다.");
+       }
 
-        Long roomId = user.getGameRoom() != null ? user.getGameRoom().getGameRoomId() : null;
-        if (roomId != null && matchQueueRepository.existsByUser_UserIdAndGameRoom_GameRoomIdAndMatchedFalse(userId, roomId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 해당 게임방에 매칭 등록이 되어있습니다.");
-        }
-        if (matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(userId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 다른 게임방에 매칭 등록이 되어있습니다.");
-        }
+       Long roomId = user.getGameRoom() != null ? user.getGameRoom().getGameRoomId() : null;
 
-        MatchQueueEntry entry = new MatchQueueEntry();
-        entry.setUser(user);
+       if (roomId != null &&
+               matchQueueRepository.existsByUser_UserIdAndGameRoom_GameRoomIdAndMatchedFalse(userId, roomId)) {
+           throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 해당 게임방에 매칭 등록이 되어있습니다.");
+       }
 
-        ProfileDTO dto = request.getProfile();
-        Profile profile = new Profile();
-        profile.setGameType(dto.getGameType());
-        profile.setAgeGroup(dto.getAgeGroup());
-        profile.setPlayStyle(dto.getPlayStyle());
-        entry.setProfile(profile);
+       if (matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(userId)) {
+           throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 다른 게임방에 매칭 등록이 되어있습니다.");
+       }
 
-        MMRDTO mmrDto = request.getMmr();
-        MMR mmr = new MMR();
-        mmr.setRating(mmrDto.getRating());
-        mmr.setTolerance(mmrDto.getTolerance());
-        entry.setMmr(mmr);
+       MatchQueueEntry entry = new MatchQueueEntry();
+       entry.setUser(user);
 
-        entry.setLocation(request.getLocation());
-        entry.setIsPrematched(request.isPreMatch());
-        entry.setMatched(false);
+       ProfileDTO dto = request.getProfile();
+       Profile profile = new Profile();
+       profile.setGameType(dto.getGameType());
+       profile.setAgeGroup(dto.getAgeGroup());
+       profile.setPlayStyle(dto.getPlayStyle());
+       entry.setProfile(profile);
 
-        if (request.isPreMatch()) {
-            entry.setDate(request.getDate());
-            entry.setTime(request.getTime());
-            entry.setMatchType(MatchQueueType.QUEUE_LOCATION);
-            entry.setGameRoom(null);
-        } else {
-            entry.setDate(LocalDate.now());
-            entry.setTime(LocalTime.now());
-            entry.setMatchType(MatchQueueType.QUEUE_GYM);
-            if (user.getGameRoom() != null) {
-                entry.setGameRoom(user.getGameRoom());
-            }
-        }
+       MMRDTO mmrDto = request.getMmr();
+       MMR mmr = new MMR();
+       mmr.setRating(mmrDto.getRating());
+       mmr.setTolerance(mmrDto.getTolerance());
+       entry.setMmr(mmr);
 
-        return new MatchQueueResponse(matchQueueRepository.save(entry));
-    }
+       entry.setLocation(request.getLocation());
+       entry.setIsPrematched(request.isPreMatch());
+       entry.setMatched(false);
 
+       if (request.isPreMatch()) {
+           // 사전매칭 큐 등록
+           entry.setMatchType(MatchQueueType.QUEUE_PRE);
+           entry.setDate(request.getDate());
+           entry.setTime(request.getTime());
+           entry.setGameRoom(null);
+       } else {
+           // 현장매칭 큐 등록
+           entry.setMatchType(MatchQueueType.QUEUE_LIVE);
+           entry.setDate(LocalDate.now());
+           entry.setTime(LocalTime.now());
+
+           if (user.getGameRoom() != null) {
+               entry.setGameRoom(user.getGameRoom());
+           }
+       }
+
+       MatchQueueEntry savedEntry = matchQueueRepository.save(entry);
+       return new MatchQueueResponse(savedEntry);
+   }
 
     // 매칭 큐 등록 취소
     public void cancelQueueEntry(Long userId) {
@@ -123,9 +131,17 @@ public class AutoMatchService {
         GameRoom room = gameRoomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("게임방을 찾을 수 없습니다."));
 
-        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndGameRoom_GameRoomId(roomId);
+        // 이 방에 등록된 QUEUE_LIVE 유저들만 필터링
+        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndGameRoom_GameRoomId(roomId).stream()
+                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_LIVE)
+                .toList();
 
-        // 그룹핑: 같은 GameType 별로 처리
+        List<Long> userIds = queue.stream()
+                .map(e -> e.getUser().getUserId())
+                .toList();
+        validateUsersBeforeMatch(userIds, room);
+
+        // 게임 타입별 그룹핑 (단식/복식)
         Map<String, List<MatchQueueEntry>> groupedByGameType = queue.stream()
                 .collect(Collectors.groupingBy(e -> e.getProfile().getGameType()));
 
@@ -141,7 +157,7 @@ public class AutoMatchService {
             for (MatchQueueEntry me : candidates) {
                 List<MatchQueueEntry> potentialPartners = candidates.stream()
                         .filter(other -> !other.getUser().getUserId().equals(me.getUser().getUserId()))
-                        .filter(other -> isSimilarEnough(me, other))
+                        .filter(other -> calculateSimilarity(me, other) >= 0.5) // ✅ 유사도 기준 적용
                         .sorted((a, b) -> Double.compare(
                                 calculateSimilarity(b, me),
                                 calculateSimilarity(a, me)
@@ -154,15 +170,8 @@ public class AutoMatchService {
                     matchedGroup.add(me);
 
                     // 유효성 검사
-                    List<Long> userIds = matchedGroup.stream().map(e -> e.getUser().getUserId()).toList();
-                    validateUsersBeforeMatch(userIds, room);
-
-                    // 상태 업데이트
-                    matchedGroup.forEach(q -> {
-                        q.setMatched(true);
-                        q.setIsPrematched(true);
-                    });
-                    matchQueueRepository.saveAll(matchedGroup);
+                    validateUsersBeforeMatch(
+                            matchedGroup.stream().map(e -> e.getUser().getUserId()).toList(), room);
 
                     // 게임 생성
                     Game game = new Game();
@@ -170,8 +179,8 @@ public class AutoMatchService {
                     game.setDate(LocalDate.now());
                     game.setTime(LocalTime.now());
                     game.setLocation(room.getLocation());
-
                     Game savedGame = gameRepository.save(game);
+
                     // 게임 히스토리 생성
                     GameHistory history = new GameHistory();
                     history.setGame(savedGame);
@@ -179,16 +188,22 @@ public class AutoMatchService {
                     history.setScoreTeamB(0);
                     history.setCompleted(false);
                     gameHistoryRepository.save(history);
-                    for (NormalUser user : savedGame.getParticipants()) {
-                        user.setCurrentGame(savedGame);
-                    }
-                    normalUserRepository.saveAll(savedGame.getParticipants());
+
+                   // 큐 상태 업데이트
+                    matchedGroup.forEach(q -> {
+                        q.setMatched(true);
+                        q.setIsPrematched(true);
+                    });
+                    matchQueueRepository.saveAll(matchedGroup);
+
+                    List<NormalUser> participants = savedGame.getParticipants();
+                    participants.forEach(user -> user.setCurrentGame(savedGame));
+                    normalUserRepository.saveAll(participants);
 
                     return savedGame;
                 }
             }
         }
-
         return null;
     }
 
@@ -209,7 +224,7 @@ public class AutoMatchService {
         for (MatchQueueEntry me : queue) {
             List<MatchQueueEntry> candidates = queue.stream()
                     .filter(other -> !other.equals(me))
-                    .filter(other -> isSimilarEnough(me, other))
+                    .filter(other -> calculateSimilarity(me, other) >= 0.5) // 유사도 조건 반영
                     .sorted((a, b) -> Double.compare(
                             calculateSimilarity(b, me),
                             calculateSimilarity(a, me)
@@ -221,8 +236,18 @@ public class AutoMatchService {
                 List<MatchQueueEntry> matchedGroup = new ArrayList<>(candidates);
                 matchedGroup.add(me);
 
-               // 게임 생성
+                // 게임 생성
                 Game game = buildGameFromQueueEntries(matchedGroup);
+                game.setLocation(room.getLocation()); // 게임방의 장소 정보로 설정
+                Game savedGame = gameRepository.save(game);
+
+                // 게임 히스토리 생성
+                GameHistory history = new GameHistory();
+                history.setGame(savedGame);
+                history.setScoreTeamA(0); // 초기값
+                history.setScoreTeamB(0);
+                history.setCompleted(false);
+                gameHistoryRepository.save(history);
 
                 // 큐 상태 업데이트
                 matchedGroup.forEach(entry -> {
@@ -232,14 +257,11 @@ public class AutoMatchService {
                 matchQueueRepository.saveAll(matchedGroup);
 
                 // 사용자 게임 연결
-                List<NormalUser> participants = game.getParticipants();
-                participants.forEach(user -> user.setCurrentGame(game));
-
-                // 저장
-                gameRepository.save(game);
+                List<NormalUser> participants = savedGame.getParticipants();
+                participants.forEach(user -> user.setCurrentGame(savedGame));
                 normalUserRepository.saveAll(participants);
 
-                return game;
+                return savedGame;
             }
         }
         return null;
@@ -252,11 +274,11 @@ public class AutoMatchService {
                 .filter(entry -> entry.getGameRoom() == null)
                 .filter(entry -> entry.getDate().equals(date))
                 .filter(entry -> entry.getTime().equals(time))
-                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_LOCATION)
+                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_PRE)
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사전매칭 큐에 등록된 유저가 없습니다."));
 
-        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_LOCATION)
+        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_PRE)
                 .stream()
                 .filter(other -> !other.getUser().getUserId().equals(userId))
                 .filter(other -> other.getDate().equals(date))
@@ -312,12 +334,6 @@ public class AutoMatchService {
     }
 
     // ========================== 유사도 계산 ==========================
-    private boolean isSameCourt(MatchQueueEntry a, MatchQueueEntry b) {
-        return a.getDate().equals(b.getDate()) &&
-               a.getTime().equals(b.getTime()) &&
-               a.getLocation().getCourtName().equals(b.getLocation().getCourtName());
-    }
-
     private boolean isNearby(Location a, Location b) {
         return GeoUtil.calculateDistance(a.getLatitude(), a.getLongitude(),
                                          b.getLatitude(), b.getLongitude()) <= 300;
