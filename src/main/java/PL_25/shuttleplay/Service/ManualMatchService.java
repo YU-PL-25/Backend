@@ -4,10 +4,7 @@ import PL_25.shuttleplay.Dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.*;
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.NormalUser;
-import PL_25.shuttleplay.Repository.GameRepository;
-import PL_25.shuttleplay.Repository.GameRoomRepository;
-import PL_25.shuttleplay.Repository.MatchQueueRepository;
-import PL_25.shuttleplay.Repository.NormalUserRepository;
+import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +22,7 @@ public class ManualMatchService {
 
     private final GameRoomRepository gameRoomRepository;
     private final GameRepository gameRepository;
+    private final GameHistoryRepository gameHistoryRepository;
     private final MatchQueueRepository matchQueueRepository;
     private final NormalUserRepository normalUserRepository;
 
@@ -43,6 +41,7 @@ public class ManualMatchService {
             }
         }
     }
+
     // 매칭 큐 등록
     public MatchQueueResponse registerToQueue(Long userId, ManualMatchRequest request) {
         NormalUser user = normalUserRepository.findById(userId)
@@ -65,25 +64,21 @@ public class ManualMatchService {
         MatchQueueEntry entry = new MatchQueueEntry();
         entry.setUser(user);
         Location location = new Location(
-            request.getLocation().getCourtName(),
-            request.getLocation().getCourtAddress(),
-            request.getLocation().getLatitude(),
-            request.getLocation().getLongitude()
+                request.getLocation().getCourtName(),
+                request.getLocation().getCourtAddress(),
+                request.getLocation().getLatitude(),
+                request.getLocation().getLongitude()
         );
         entry.setLocation(location);
         entry.setMatched(false);
         entry.setIsPrematched(request.isPreMatch());
 
-        if (request.getLocation().getLatitude() != 0 && request.getLocation().getLongitude() != 0 && request.isPreMatch()) {
-            entry.setMatchType(MatchQueueType.QUEUE_LOCATION);
-        } else {
-            entry.setMatchType(MatchQueueType.QUEUE_GYM);
-        }
-
         if (request.isPreMatch()) {
+            entry.setMatchType(MatchQueueType.QUEUE_PRE);
             entry.setDate(request.getDate());
             entry.setTime(request.getTime());
         } else {
+            entry.setMatchType(MatchQueueType.QUEUE_LIVE);
             entry.setDate(LocalDate.now());
             entry.setTime(LocalTime.now());
         }
@@ -94,6 +89,7 @@ public class ManualMatchService {
 
         return new MatchQueueResponse(matchQueueRepository.save(entry));
     }
+
     // 매칭 큐 등록 취소
     public void cancelQueueEntry(Long userId) {
         List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
@@ -112,8 +108,9 @@ public class ManualMatchService {
     // 사전 수동 매칭 (구장)
     public Game createManualGameFromRoom(GameRoom room, List<Long> userIds, LocalDate date, LocalTime time) {
         validateUsersBeforeMatch(userIds, room);
+
         List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdInAndMatchedFalse(userIds)
-                .stream().filter(e -> e.getMatchType() == MatchQueueType.QUEUE_GYM).toList();
+                .stream().filter(e -> e.getMatchType() == MatchQueueType.QUEUE_LIVE).toList();
 
         if (entries.size() != userIds.size()) {
             throw new IllegalArgumentException("일부 사용자가 매칭 큐에 없거나 이미 매칭되었습니다.");
@@ -130,19 +127,30 @@ public class ManualMatchService {
         game.setTime(time != null ? time : LocalTime.now());
         game.setLocation(room.getLocation());
         game.setParticipants(entries.stream().map(MatchQueueEntry::getUser).toList());
-        gameRepository.save(game);
+        Game savedGame = gameRepository.save(game);
 
-        for (NormalUser user : game.getParticipants()) {
-            user.setCurrentGame(game);
+        // 게임 히스토리 생성
+        GameHistory history = new GameHistory();
+        history.setGame(savedGame);
+        history.setScoreTeamA(0);
+        history.setScoreTeamB(0);
+        history.setCompleted(false);
+        gameHistoryRepository.save(history);
+
+        for (NormalUser user : savedGame.getParticipants()) {
+            user.setCurrentGame(savedGame);
         }
-        normalUserRepository.saveAll(game.getParticipants());
-        return game;
+        normalUserRepository.saveAll(savedGame.getParticipants());
+
+        return savedGame;
     }
+
     // 현장 매칭 수동(구장)
     public Game createLiveGameFromRoom(GameRoom room, List<Long> userIds) {
         validateUsersBeforeMatch(userIds, room);
+
         List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdInAndMatchedFalse(userIds)
-                .stream().filter(e -> e.getMatchType() == MatchQueueType.QUEUE_GYM).toList();
+                .stream().filter(e -> e.getMatchType() == MatchQueueType.QUEUE_LIVE).toList();
 
         if (entries.size() != userIds.size()) {
             throw new IllegalArgumentException("일부 사용자가 매칭 큐에 없거나 이미 매칭되었습니다.");
@@ -159,18 +167,27 @@ public class ManualMatchService {
         game.setTime(LocalTime.now());
         game.setLocation(room.getLocation());
         game.setParticipants(entries.stream().map(MatchQueueEntry::getUser).toList());
-        gameRepository.save(game);
+        Game savedGame = gameRepository.save(game);
 
-        for (NormalUser user : game.getParticipants()) {
-            user.setCurrentGame(game);
+        // 게임 히스토리 생성
+        GameHistory history = new GameHistory();
+        history.setGame(savedGame);
+        history.setScoreTeamA(0);
+        history.setScoreTeamB(0);
+        history.setCompleted(false);
+        gameHistoryRepository.save(history);
+
+        for (NormalUser user : savedGame.getParticipants()) {
+            user.setCurrentGame(savedGame);
         }
-        normalUserRepository.saveAll(game.getParticipants());
-        return game;
+        normalUserRepository.saveAll(savedGame.getParticipants());
+
+        return savedGame;
     }
 
     // 사전매칭 동네를 위한 가까운 거리 유저 리스트 반환
     public List<MatchQueueEntry> getNearbyPreLocationQueue(double latitude, double longitude) {
-        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_LOCATION);
+        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_PRE);
 
         return queue.stream()
                 .filter(entry -> {
@@ -186,6 +203,7 @@ public class ManualMatchService {
                 })
                 .collect(Collectors.toList());
     }
+
     // 사전 수동 매칭(동네) - 게임방 생성
     public GameRoom createGameRoomFromUserList(String courtName,
                                                String courtAddress,
