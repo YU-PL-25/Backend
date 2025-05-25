@@ -13,7 +13,7 @@ public interface GameHistoryRepository extends JpaRepository<GameHistory, Long> 
     @Query("SELECT gh FROM GameHistory gh " +
        "JOIN gh.game g " +
        "JOIN g.participants p " +
-       "WHERE p.userId = :userId")
+       "WHERE p.user.userId = :userId")
     List<GameHistory> findByUserId(@Param("userId") Long userId);
 
 }

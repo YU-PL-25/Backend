@@ -1,6 +1,6 @@
 package PL_25.shuttleplay.Controller;
 
-import PL_25.shuttleplay.Dto.Matching.ManualMatchRequest;
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Entity.Game.MatchQueueEntry;

@@ -5,13 +5,18 @@ import PL_25.shuttleplay.Entity.Game.GameHistory;
 import PL_25.shuttleplay.Entity.Game.GameStatus;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;
+import PL_25.shuttleplay.Repository.GameParticipantRepository;
 import PL_25.shuttleplay.Repository.GameRepository;
+import PL_25.shuttleplay.Service.GameParticipantService;
 import PL_25.shuttleplay.Service.MMRService;
 import PL_25.shuttleplay.Service.NormalUserService;
 import PL_25.shuttleplay.dto.GameHistoryDTO;
+import PL_25.shuttleplay.dto.Matching.TeamAssignmentDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /*********************************************
 * GameRoom 내의 각 Game 에 대한 컨트롤러
@@ -27,6 +32,8 @@ public class GameController {
     private final GameHistoryRepository gameHistoryRepository;
     private final GameRepository gameRepository;
     private final MMRService mmrService;
+    private final GameParticipantService gameParticipantService;
+    private GameHistory gameHistory;
 
     // 매칭된 게임(경기) 시작하기
     @PatchMapping("/{gameId}/start")
@@ -59,6 +66,17 @@ public class GameController {
 
         return ResponseEntity.ok("Game이 CANCELLED 상태로 변경되었습니다.");
     }
+
+    // 게임 시작 전 팀 구분하기 (A팀, B팀)
+    @PatchMapping("/{gameId}/team")
+    public ResponseEntity<String> assignTeams(@PathVariable Long gameId, @RequestBody List<TeamAssignmentDTO> teamAssignments) {
+        for (TeamAssignmentDTO dto : teamAssignments) {
+            gameParticipantService.assignTeam(gameId, dto.getUserId(), dto.getParsedTeamType());
+        }
+        return ResponseEntity.ok("팀 배정 완료!");
+    }
+
+
 
 
     // 경기 종료 시 FINISHED 상태로 전환 (게임 종료하기, 스코어 입력하기)
@@ -99,9 +117,6 @@ public class GameController {
         gameHistoryRepository.save(gameHistory);
         gameRepository.save(game);
 
-        // MMR 점수 갱신
-//        normalUserService.updateMmr(dto.getUserId(), dto.getOpponentId(), gameHistory);
-
         // Game 방장이 경기 결과를 입력하면 해당 Game에 참가중인 참가자들에게 모두 MMR 점수 반영하도록 함
         if (game.getParticipants().size() != 2) {
             return ResponseEntity.badRequest().body("현재는 1:1 경기만 지원됩니다.");
@@ -109,6 +124,10 @@ public class GameController {
         // MMR 점수 갱신 (단식)
         Long userA = game.getParticipants().get(0).getUserId();
         Long userB = game.getParticipants().get(1).getUserId();
+        // 복식 구분
+        if (game.getParticipants().size() == 4) {
+            mmrService.updateMmrForTeamMatch(game, gameHistory);
+        }
 
         normalUserService.updateMmr(userA, userB, gameHistory);
         normalUserService.updateMmr(userB, userA, gameHistory);
