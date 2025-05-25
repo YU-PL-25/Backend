@@ -1,4 +1,4 @@
-package PL_25.shuttleplay.Dto.Matching;
+package PL_25.shuttleplay.dto.Matching;
 
 import PL_25.shuttleplay.Entity.Location;
 import lombok.Getter;

@@ -1,4 +1,4 @@
-package PL_25.shuttleplay.Dto.Matching;
+package PL_25.shuttleplay.dto.Matching;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
