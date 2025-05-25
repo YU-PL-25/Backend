@@ -3,13 +3,13 @@ package PL_25.shuttleplay.Entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class Location {
     @Id
