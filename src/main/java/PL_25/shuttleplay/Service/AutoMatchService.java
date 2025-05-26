@@ -1,14 +1,20 @@
 package PL_25.shuttleplay.Service;
 
+
 import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
 import PL_25.shuttleplay.dto.Matching.MMRDTO;
 import PL_25.shuttleplay.dto.Matching.ProfileDTO;
 import PL_25.shuttleplay.Entity.Game.*;
+import PL_25.shuttleplay.Repository.*;
+import PL_25.shuttleplay.Entity.Game.*;
+import PL_25.shuttleplay.Repository.*;
+import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
+import PL_25.shuttleplay.dto.Matching.MMRDTO;
+import PL_25.shuttleplay.dto.Matching.ProfileDTO;
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.MMR;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Entity.User.Profile;
-import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
