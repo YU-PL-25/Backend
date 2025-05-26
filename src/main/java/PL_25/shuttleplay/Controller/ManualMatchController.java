@@ -1,6 +1,9 @@
 package PL_25.shuttleplay.Controller;
 
-import PL_25.shuttleplay.Dto.Matching.ManualMatchRequest;
+import PL_25.shuttleplay.Entity.User.NormalUser;
+import PL_25.shuttleplay.Repository.GameRoomRepository;
+import PL_25.shuttleplay.Repository.NormalUserRepository;
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Entity.Game.MatchQueueEntry;
@@ -21,6 +24,8 @@ import java.util.Map;
 public class ManualMatchController {
 
     private final ManualMatchService manualMatchService;
+    private final GameRoomRepository gameRoomRepository;
+    private final NormalUserRepository normalUserRepository;
 
     // 구장 기반 큐 등록
     @PostMapping("/queue/gym")
@@ -90,6 +95,7 @@ public class ManualMatchController {
                 "time", game.getTime()
         ));
     }
+
     // 현장 수동 매칭(구장 기준)
     @PostMapping("/create/live-game")
     public ResponseEntity<Map<String, Object>> createLiveGame(@RequestParam Long roomId,
@@ -108,33 +114,84 @@ public class ManualMatchController {
         ));
     }
 
-    // 사전 수동매칭에 사용할 거리 기반으로 가까운 유저 반환
-    @GetMapping("/queue/nearby")
-    public ResponseEntity<List<MatchQueueEntry>> getNearbyUsers(@RequestParam double latitude,
-                                                                 @RequestParam double longitude) {
-        List<MatchQueueEntry> nearby = manualMatchService.getNearbyPreLocationQueue(latitude, longitude);
-        return ResponseEntity.ok(nearby);
+    // 사전 수동 매칭(동네 기준) - 매칭 큐 등록 + 근처 게임방 리스트 반환
+    @PostMapping("/queue/location-and-rooms")
+    public ResponseEntity<Map<String, Object>> registerAndGetNearbyRooms(@RequestParam Long userId,
+                                                                         @RequestBody ManualMatchRequest request) {
+        // 1. 큐 등록
+        MatchQueueResponse response = manualMatchService.registerToQueue(userId, request);
+
+        // 2. 300m 이내 동일 시간대 게임방 검색
+        List<GameRoom> nearbyRooms = manualMatchService.findNearbyRooms(
+                request.getLocation().getLatitude(),
+                request.getLocation().getLongitude(),
+                request.getDate(),
+                request.getTime()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "큐 등록 및 주변 게임방 조회 완료",
+                "registeredUserId", response.getUserId(),
+                "rooms", nearbyRooms
+        ));
     }
 
     // 사전 수동 매칭 (동네 기준)
-    @PostMapping("/create/location-room")
-    public ResponseEntity<Map<String, Object>> createLocationRoom(@RequestBody Map<String, Object> body) {
-        String courtName = (String) body.get("courtName");
-        String courtAddress = (String) body.get("courtAddress");
-        LocalDate date = LocalDate.parse((String) body.get("date"));
-        LocalTime time = LocalTime.parse((String) body.get("time"));
-        List<Integer> userIds = (List<Integer>) body.get("userIds");
-        List<Long> longUserIds = userIds.stream().map(Integer::longValue).toList();
+    // 방 목록에서 게임방 참가
+    @PostMapping("/join-room")
+    public ResponseEntity<Map<String, Object>> joinRoom(@RequestParam Long userId, @RequestParam Long roomId) {
+        GameRoom room = gameRoomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다."));
+        NormalUser user = normalUserRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
-        GameRoom room = manualMatchService.createGameRoomFromUserList(courtName, courtAddress, date, time, longUserIds);
+        // 유효성 검사
+        manualMatchService.validateUsersBeforeMatch(List.of(userId), room);
+
+        room.getParticipants().add(user);
+        user.setGameRoom(room);
+        gameRoomRepository.save(room);
+        normalUserRepository.save(user);
 
         return ResponseEntity.ok(Map.of(
-                "message", "매칭 되었습니다.",
+                "message", "게임방 참가 완료",
+                "gameRoomId", roomId
+        ));
+    }
+    // 사전 수동 매칭 (동네 기준)
+    // 방 목록에서 새로운 게임방 생성
+    @PostMapping("/create/location-room")
+    public ResponseEntity<Map<String, Object>> createLocationRoom(@RequestBody Map<String, Object> body) {
+        // 장소 정보 (이름, 주소)
+        String courtName = (String) body.get("courtName");
+        String courtAddress = (String) body.get("courtAddress");
+
+        // 좌표 정보 (반드시 있어야 거리 계산 가능)
+        double latitude = ((Number) body.get("latitude")).doubleValue();
+        double longitude = ((Number) body.get("longitude")).doubleValue();
+
+        // 경기 날짜 / 경기 시간
+        LocalDate date = LocalDate.parse((String) body.get("date"));
+        LocalTime time = LocalTime.parse((String) body.get("time"));
+
+        // 방 생성 요청한 사용자 ID
+        Long userId = ((Number) body.get("userId")).longValue();
+
+        // 실제 게임방 생성 서비스 호출
+        GameRoom room = manualMatchService.createGameRoomForOneUser(
+                courtName, courtAddress, latitude, longitude, date, time, userId
+        );
+
+        // 클라이언트에 생성 결과 응답
+        return ResponseEntity.ok(Map.of(
+                "message", "새 게임방 생성 완료",
                 "gameRoomId", room.getGameRoomId(),
-                "userIds", longUserIds,
+                "userId", userId,
                 "location", room.getLocation(),
                 "date", room.getDate(),
                 "time", room.getTime()
         ));
     }
+
+
 }

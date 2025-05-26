@@ -1,10 +1,10 @@
 package PL_25.shuttleplay.Service;
 
-import PL_25.shuttleplay.Dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.*;
+import PL_25.shuttleplay.Repository.*;
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.NormalUser;
-import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,7 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +25,7 @@ public class ManualMatchService {
     private final MatchQueueRepository matchQueueRepository;
     private final NormalUserRepository normalUserRepository;
 
-    private void validateUsersBeforeMatch(List<Long> userIds, GameRoom currentRoomOrNull) {
+    public void validateUsersBeforeMatch(List<Long> userIds, GameRoom currentRoomOrNull) {
         for (Long userId : userIds) {
             boolean inGame = gameRepository.existsByParticipants_UserIdAndStatus(userId, GameStatus.ONGOING);
             if (inGame) {
@@ -185,52 +184,54 @@ public class ManualMatchService {
         return savedGame;
     }
 
-    // 사전매칭 동네를 위한 가까운 거리 유저 리스트 반환
-    public List<MatchQueueEntry> getNearbyPreLocationQueue(double latitude, double longitude) {
-        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_PRE);
-
-        return queue.stream()
-                .filter(entry -> {
-                    Location loc = entry.getLocation();
-                    if (loc != null) {
-                        double dist = GeoUtil.calculateDistance(latitude, longitude, loc.getLatitude(), loc.getLongitude());
-                        System.out.println(">> userId: " + entry.getUser().getUserId() +
-                                ", lat: " + loc.getLatitude() + ", lon: " + loc.getLongitude() +
-                                ", 거리: " + dist + "m");
-                        return dist <= 300;
-                    }
-                    return false;
+    // 사전 수동 매칭(동네 기반) - 사용자가 입력한 위치/날짜/시간을 기준으로
+    // 300m 이내에 존재하는 다른 게임방 목록을 조회하는 메서드
+    public List<GameRoom> findNearbyRooms(double latitude, double longitude, LocalDate date, LocalTime time) {
+        return gameRoomRepository.findByDateAndTime(date, time)  // 같은 날짜 & 시간대의 모든 게임방 조회
+                .stream()
+                .filter(room -> {
+                    Location loc = room.getLocation(); // 방의 위치 정보
+                    // 유저의 현재 위치와 방의 위치 간 거리 계산
+                    double distance = GeoUtil.calculateDistance(latitude, longitude, loc.getLatitude(), loc.getLongitude());
+                    return distance <= 300; //  300m 이내인 방만 필터링
                 })
-                .collect(Collectors.toList());
+                .toList(); // 최종 리스트 반환
     }
 
-    // 사전 수동 매칭(동네) - 게임방 생성
-    public GameRoom createGameRoomFromUserList(String courtName,
-                                               String courtAddress,
-                                               LocalDate date,
-                                               LocalTime time,
-                                               List<Long> userIds) {
+    // 사전 수동 매칭(동네) - 혼자 게임방 생성 (다른 유저가 참여하길 기다리는 방)
+    public GameRoom createGameRoomForOneUser(String courtName,
+                                             String courtAddress,
+                                             double latitude,
+                                             double longitude,
+                                             LocalDate date,
+                                             LocalTime time,
+                                             Long userId) {
 
-        List<NormalUser> users = normalUserRepository.findAllById(userIds);
-        if (users.size() != userIds.size()) {
-            throw new IllegalArgumentException("일부 유저를 찾을 수 없습니다.");
-        }
+        // 사용자 조회
+        NormalUser user = normalUserRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
-        validateUsersBeforeMatch(userIds, null);
+        // 현재 진행 중인 게임이나 다른 방 참여 여부 검사
+        validateUsersBeforeMatch(List.of(userId), null);
 
-        Location location = new Location(courtName, courtAddress);
+        // 위치 객체 생성 (좌표 포함)
+        Location location = new Location(courtName, courtAddress, latitude, longitude);
 
+        // 게임방 생성 및 사용자 등록
         GameRoom room = new GameRoom();
         room.setLocation(location);
         room.setDate(date);
         room.setTime(time);
-        room.setParticipants(users);
-        gameRoomRepository.save(room);
+        room.setParticipants(List.of(user));  // 생성자는 자동 등록
 
-        for (NormalUser user : users) {
-            user.setGameRoom(room);
-        }
-        normalUserRepository.saveAll(users);
-        return room;
+        // DB 저장
+        GameRoom savedRoom = gameRoomRepository.save(room);
+
+        // 사용자-게임방 연결
+        user.setGameRoom(savedRoom);
+        normalUserRepository.save(user);
+
+        return savedRoom;
     }
+
 }
