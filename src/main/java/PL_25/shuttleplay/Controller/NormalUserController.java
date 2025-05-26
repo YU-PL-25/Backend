@@ -30,12 +30,12 @@ public class NormalUserController {
 
         return histories.stream()
             .map(history -> {
-                // 상대방 ID 추출 로직 예시
+                // 상대방 ID 추출 로직 수정!
                 Long opponentId = history.getGame().getParticipants().stream()
-                    .filter(p -> !p.getUserId().equals(userId))
-                    .findFirst()
-                    .map(NormalUser::getUserId)
-                    .orElse(null);
+                        .filter(p -> !p.getUser().getUserId().equals(userId))
+                        .findFirst()
+                        .map(participant -> participant.getUser().getUserId())
+                        .orElse(null);
 
                 return GameHistoryResponseDTO.builder()
                     .gameId(history.getGame().getGameId())

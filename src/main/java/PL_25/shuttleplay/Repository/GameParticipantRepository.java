@@ -1,0 +1,18 @@
+package PL_25.shuttleplay.Repository;
+
+import PL_25.shuttleplay.Entity.Game.Game;
+import PL_25.shuttleplay.Entity.Game.GameParticipant;
+import PL_25.shuttleplay.Entity.Game.GameStatus;
+import PL_25.shuttleplay.Entity.Game.TeamType;
+import PL_25.shuttleplay.Entity.User.NormalUser;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface GameParticipantRepository extends JpaRepository<GameParticipant, Long> {
+    Optional<GameParticipant> findByGameAndUser(Game game, NormalUser user);
+    List<GameParticipant> findByGameAndTeam(Game game, TeamType team);
+    Optional<GameParticipant> findByGame_GameIdAndUser_UserId(Long gameId, Long userId);
+    boolean existsByUser_UserIdAndGame_Status(Long userId, GameStatus status);
+}
