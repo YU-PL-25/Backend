@@ -1,6 +1,6 @@
 package PL_25.shuttleplay.Service;
 
-import PL_25.shuttleplay.Dto.Matching.ManualMatchRequest;
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.*;
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.NormalUser;
@@ -25,10 +25,12 @@ public class ManualMatchService {
     private final GameHistoryRepository gameHistoryRepository;
     private final MatchQueueRepository matchQueueRepository;
     private final NormalUserRepository normalUserRepository;
+    private final GameParticipantRepository gameParticipantRepository;
 
+    // 매칭 전 유저 상태 확인 (게임중이거나, 다른 방에 대기중이거나)
     private void validateUsersBeforeMatch(List<Long> userIds, GameRoom currentRoomOrNull) {
         for (Long userId : userIds) {
-            boolean inGame = gameRepository.existsByParticipants_UserIdAndStatus(userId, GameStatus.ONGOING);
+            boolean inGame = gameParticipantRepository.existsByUser_UserIdAndGame_Status(userId, GameStatus.ONGOING);
             if (inGame) {
                 throw new IllegalStateException("userId=" + userId + " 는 이미 게임 중입니다.");
             }
@@ -126,21 +128,19 @@ public class ManualMatchService {
         game.setDate(date != null ? date : LocalDate.now());
         game.setTime(time != null ? time : LocalTime.now());
         game.setLocation(room.getLocation());
-        game.setParticipants(entries.stream().map(MatchQueueEntry::getUser).toList());
         Game savedGame = gameRepository.save(game);
 
-        // 게임 히스토리 생성
-        GameHistory history = new GameHistory();
-        history.setGame(savedGame);
-        history.setScoreTeamA(0);
-        history.setScoreTeamB(0);
-        history.setCompleted(false);
-        gameHistoryRepository.save(history);
+        // 팀 구분을 위한 코드 수정 부분
+        List<GameParticipant> participants = entries.stream().map(entry -> {
+            GameParticipant participant = new GameParticipant();
+            participant.setGame(savedGame);
+            participant.setUser(entry.getUser());
+            return participant;
+        }).collect(Collectors.toList());
 
-        for (NormalUser user : savedGame.getParticipants()) {
-            user.setCurrentGame(savedGame);
-        }
-        normalUserRepository.saveAll(savedGame.getParticipants());
+        gameParticipantRepository.saveAll(participants);
+
+        // GameHistory 저장은 게임 결과 입력 시 하는 것으로..
 
         return savedGame;
     }
@@ -166,21 +166,19 @@ public class ManualMatchService {
         game.setDate(LocalDate.now());
         game.setTime(LocalTime.now());
         game.setLocation(room.getLocation());
-        game.setParticipants(entries.stream().map(MatchQueueEntry::getUser).toList());
         Game savedGame = gameRepository.save(game);
 
-        // 게임 히스토리 생성
-        GameHistory history = new GameHistory();
-        history.setGame(savedGame);
-        history.setScoreTeamA(0);
-        history.setScoreTeamB(0);
-        history.setCompleted(false);
-        gameHistoryRepository.save(history);
+        // 팀 구분을 위한 코드 수정 부분
+        List<GameParticipant> participants = entries.stream().map(entry -> {
+            GameParticipant participant = new GameParticipant();
+            participant.setGame(savedGame);
+            participant.setUser(entry.getUser());
+            return participant;
+        }).collect(Collectors.toList());
 
-        for (NormalUser user : savedGame.getParticipants()) {
-            user.setCurrentGame(savedGame);
-        }
-        normalUserRepository.saveAll(savedGame.getParticipants());
+        gameParticipantRepository.saveAll(participants);
+
+        // GameHistory 저장은 게임 결과 입력 시 하는 것으로..
 
         return savedGame;
     }

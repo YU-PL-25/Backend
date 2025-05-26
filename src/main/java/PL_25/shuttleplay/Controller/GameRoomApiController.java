@@ -1,18 +1,18 @@
 package PL_25.shuttleplay.Controller;
 
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomJoinDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Service.GameRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequiredArgsConstructor
@@ -66,6 +66,31 @@ public class GameRoomApiController {
         } else {
             response.put("status", 400);
             response.put("error", "사전 매칭(구장) 게임방 생성에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 이미 생성되어 있는 방에 참가 요청
+    @PostMapping("/api/rooms/{roomId}/join")
+    public ResponseEntity<Map<String, Object>> joinGameRoom(
+            @PathVariable("roomId") long roomId,
+            @RequestBody GameRoomJoinDTO gameRoomJoinDTO
+            ) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            GameRoom gameRoom = gameRoomService.addUserToGameRoom(roomId, gameRoomJoinDTO.getUserId());
+
+            response.put("status", 200);
+            response.put("message", "유저의 게임방 참가 요청이 성공했습니다.");
+            response.put("gameRoomId", gameRoom.getGameRoomId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (NoSuchElementException e) {
+            response.put("status", 400);
+            response.put("error", "유저의 게임방 참가 요청이 실패했습니다.");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
