@@ -1,5 +1,7 @@
 package PL_25.shuttleplay.Controller;
 
+import PL_25.shuttleplay.Entity.Game.GameParticipant;
+import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
@@ -76,10 +78,11 @@ public class AutoMatchController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
 
-        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기
+        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요, 최종 테스트 시 주석제거 또는 properties enable 수정)
         // messageService가 null이 아닐 때만 문자 전송
         if (messageService != null) {
-            for (var user : game.getParticipants()) {
+            for (GameParticipant participant : game.getParticipants()) {
+                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
                 String to = user.getPhone();
                 String text = "[셔틀플레이] " + user.getName() + "님! "
                         + game.getDate() + " " + game.getTime() + "에 "
@@ -103,6 +106,19 @@ public class AutoMatchController {
         Game game = autoMatchService.matchLiveCourtFromRoom(roomId);
         if (game == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
+        }
+
+        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요, 최종 테스트 시 주석제거)
+        // messageService가 null이 아닐 때만 문자 전송
+        if (messageService != null) {
+            for (GameParticipant participant : game.getParticipants()) {
+                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
+                String to = user.getPhone();
+                String text = "[셔틀플레이] " + user.getName() + "님! "
+                        + game.getDate() + " " + game.getTime() + "에 "
+                        + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
+                messageService.sendMessage(to, text);
+            }
         }
 
         return ResponseEntity.ok(Map.of(
