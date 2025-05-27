@@ -1,5 +1,6 @@
 package PL_25.shuttleplay.Service;
 
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.*;
 import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
@@ -233,5 +234,4 @@ public class ManualMatchService {
 
         return savedRoom;
     }
-
 }
