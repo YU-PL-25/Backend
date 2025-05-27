@@ -1,5 +1,9 @@
 package PL_25.shuttleplay.Service;
 
+
+import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
+import PL_25.shuttleplay.dto.Matching.MMRDTO;
+import PL_25.shuttleplay.dto.Matching.ProfileDTO;
 import PL_25.shuttleplay.Entity.Game.*;
 import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Entity.Game.*;
@@ -33,18 +37,18 @@ public class AutoMatchService {
     private final GameRepository gameRepository;
     private final NormalUserRepository normalUserRepository;
     private final GameHistoryRepository gameHistoryRepository;
+    private final GameParticipantRepository gameParticipantRepository;
 
 
     // 유효성 검사
     private void validateUsersBeforeMatch(List<Long> userIds, GameRoom currentRoomOrNull) {
         for (Long userId : userIds) {
-            boolean inGame = gameRepository.existsByParticipants_UserIdAndStatus(userId, GameStatus.ONGOING);
+            boolean inGame = gameParticipantRepository.existsByUser_UserIdAndGame_Status(userId, GameStatus.ONGOING);
             if (inGame) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "userId=" + userId + " 는 현재 게임 중입니다.");
             }
-
-           List<MatchQueueEntry> existing = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
-            for(MatchQueueEntry entry : existing) {
+            List<MatchQueueEntry> existing = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
+            for (MatchQueueEntry entry : existing) {
                 if (entry.getGameRoom() != null &&
                         (currentRoomOrNull == null || !entry.getGameRoom().getGameRoomId().equals(currentRoomOrNull.getGameRoomId()))) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "userId=" + userId + " 는 이미 다른 방에 대기 중입니다.");
@@ -177,11 +181,19 @@ public class AutoMatchService {
 
                     // 게임 생성
                     Game game = new Game();
-                    game.setParticipants(matchedGroup.stream().map(MatchQueueEntry::getUser).toList());
                     game.setDate(LocalDate.now());
                     game.setTime(LocalTime.now());
                     game.setLocation(room.getLocation());
                     Game savedGame = gameRepository.save(game);
+
+                    // 참가자 저장부분 수정
+                    List<GameParticipant> participants = matchedGroup.stream().map(queueEntry -> {
+                        GameParticipant p = new GameParticipant();
+                        p.setGame(savedGame);
+                        p.setUser(queueEntry.getUser());
+                        return p;
+                    }).toList();
+                    gameParticipantRepository.saveAll(participants);
 
                     // 게임 히스토리 생성
                     GameHistory history = new GameHistory();
@@ -198,9 +210,10 @@ public class AutoMatchService {
                     });
                     matchQueueRepository.saveAll(matchedGroup);
 
-                    List<NormalUser> participants = savedGame.getParticipants();
-                    participants.forEach(user -> user.setCurrentGame(savedGame));
-                    normalUserRepository.saveAll(participants);
+                    // 코드 수정
+                    List<NormalUser> users = matchedGroup.stream().map(MatchQueueEntry::getUser).toList();
+                    users.forEach(user -> user.setCurrentGame(savedGame));
+                    normalUserRepository.saveAll(users);
 
                     return savedGame;
                 }
@@ -243,6 +256,15 @@ public class AutoMatchService {
                 game.setLocation(room.getLocation()); // 게임방의 장소 정보로 설정
                 Game savedGame = gameRepository.save(game);
 
+                // 참가자 저장 수정
+                List<GameParticipant> participants = matchedGroup.stream().map(entry -> {
+                    GameParticipant p = new GameParticipant();
+                    p.setGame(savedGame);
+                    p.setUser(entry.getUser());
+                    return p;
+                }).toList();
+                gameParticipantRepository.saveAll(participants);
+
                 // 게임 히스토리 생성
                 GameHistory history = new GameHistory();
                 history.setGame(savedGame);
@@ -258,10 +280,11 @@ public class AutoMatchService {
                 });
                 matchQueueRepository.saveAll(matchedGroup);
 
-                // 사용자 게임 연결
-                List<NormalUser> participants = savedGame.getParticipants();
-                participants.forEach(user -> user.setCurrentGame(savedGame));
-                normalUserRepository.saveAll(participants);
+                // 사용자 게임 연결 (타입 수정)
+                List<NormalUser> users = matchedGroup.stream().map(MatchQueueEntry::getUser).toList();
+                users.forEach(user -> user.setCurrentGame(savedGame));
+                normalUserRepository.saveAll(users);
+
 
                 return savedGame;
             }
@@ -325,14 +348,30 @@ public class AutoMatchService {
     // ========================== 게임 생성 ==========================
     public Game buildGameFromQueueEntries(List<MatchQueueEntry> entries) {
         Game game = new Game();
-        game.setParticipants(entries.stream().map(MatchQueueEntry::getUser).toList());
-
         MatchQueueEntry base = entries.get(0);
         game.setDate(base.getDate());
         game.setTime(base.getTime());
         game.setLocation(base.getLocation());
 
-        return game;
+        Game savedGame = gameRepository.save(game);
+
+        // GameParticipant 수정 부분
+        List<GameParticipant> participants = entries.stream().map(entry -> {
+            GameParticipant participant = new GameParticipant();
+            participant.setGame(savedGame);
+            participant.setUser(entry.getUser());
+            return participant;
+        }).collect(Collectors.toList());
+        gameParticipantRepository.saveAll(participants);
+
+        // NormalUser 객체에 currentGame 설정
+        for (GameParticipant gp : participants) {
+            NormalUser user = gp.getUser();
+            user.setCurrentGame(savedGame);
+            normalUserRepository.save(user);
+        }
+
+        return savedGame;
     }
 
     // ========================== 유사도 계산 ==========================

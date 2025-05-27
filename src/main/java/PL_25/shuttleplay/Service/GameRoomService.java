@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -43,12 +43,13 @@ public class GameRoomService {
 
         // 프론트에서 가져온 데이터로 GameRoom 엔티티 생성.
         GameRoom gameRoom = GameRoom.builder()
-                .participants(new ArrayList<>() {{ add(master); }})
-                .gameList(new ArrayList<>())
                 .location(selectedLocation)
                 .date(LocalDate.now())
                 .time(LocalTime.now())
                 .build();
+
+        // 방장의 GameRoom 설정.
+        master.setGameRoom(gameRoom);
 
         // db에 저장하기.
         return gameRoomRepository.save(gameRoom);
@@ -65,6 +66,7 @@ public class GameRoomService {
         // pk로 방장 NormalUser 가져오기
         NormalUser master = normalUserRepository
                 .findById(gameRoomDTO.getMasterId()).orElse(null);
+
         // 방장이 없으면 return null;
         if (master == null) {
             return null;
@@ -75,14 +77,34 @@ public class GameRoomService {
 
         // 프론트에서 가져온 데이터로 GameRoom 엔티티 생성.
         GameRoom gameRoom = GameRoom.builder()
-                .participants(new ArrayList<>() {{ add(master); }})
-                .gameList(new ArrayList<>())
                 .location(selectedLocation)
                 .date(gameRoomDTO.getLocalDate())
                 .time(gameRoomDTO.getLocalTime())
                 .build();
 
+        // 방장의 GameRoom 설정.
+        master.setGameRoom(gameRoom);
+
         // db에 저장하기.
         return gameRoomRepository.save(gameRoom);
+    }
+
+
+    // 참가 요청한 유저를 특정 GameRoom에 넣기
+    @Transactional
+    public GameRoom addUserToGameRoom(long gameRoomId, long userId) {
+
+        // GameRoom이 없으면 throw.
+        GameRoom gameRoom = gameRoomRepository.findById(gameRoomId)
+                .orElseThrow(() -> new NoSuchElementException("해당 게임방 없음 : " + gameRoomId));
+
+        // 요청한 NormalUser가 없으면 throw.
+        NormalUser user = normalUserRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("요청한 유저 없음 : " + userId));
+
+        // 둘다 있으면 유저의 GameRoom 설정.
+        user.setGameRoom(gameRoom);
+
+        return gameRoom;
     }
 }

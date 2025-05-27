@@ -27,14 +27,9 @@ public class Game {
 
     private boolean isPrematched;;
 
-    @ManyToMany
-    @JoinTable(
-            name = "game_participants",
-            joinColumns = @JoinColumn(name = "game_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    @JsonIgnore
-    private List<NormalUser> participants;
+    // GameParticipant 엔티티 생성으로 매핑 수정
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
+    private List<GameParticipant> participants;
 
     private LocalDate date;
     private LocalTime time;
