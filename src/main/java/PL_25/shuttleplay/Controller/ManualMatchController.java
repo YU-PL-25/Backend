@@ -2,6 +2,7 @@ package PL_25.shuttleplay.Controller;
 
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameRoomRepository;
+import PL_25.shuttleplay.Repository.MatchQueueRepository;
 import PL_25.shuttleplay.Repository.NormalUserRepository;
 import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.Game;
@@ -10,8 +11,10 @@ import PL_25.shuttleplay.Entity.Game.MatchQueueEntry;
 import PL_25.shuttleplay.Entity.Game.MatchQueueResponse;
 import PL_25.shuttleplay.Service.ManualMatchService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -26,6 +29,7 @@ public class ManualMatchController {
     private final ManualMatchService manualMatchService;
     private final GameRoomRepository gameRoomRepository;
     private final NormalUserRepository normalUserRepository;
+    private final MatchQueueRepository matchQueueRepository;
 
     // 구장 기반 큐 등록
     @PostMapping("/queue/gym")
@@ -148,6 +152,18 @@ public class ManualMatchController {
         // 유효성 검사
         manualMatchService.validateUsersBeforeMatch(List.of(userId), room);
 
+        // 매칭 큐 entry 조회 및 matched 처리
+        List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
+        if (entries.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 유저의 매칭 큐가 존재하지 않습니다.");
+        }
+        for (MatchQueueEntry entry : entries) {
+            entry.setMatched(true);
+            entry.setGameRoom(room); // 방 정보도 설정해 줌
+        }
+        matchQueueRepository.saveAll(entries); // 저장
+
+        // 게임방에 참가자 추가
         room.getParticipants().add(user);
         user.setGameRoom(room);
         gameRoomRepository.save(room);
