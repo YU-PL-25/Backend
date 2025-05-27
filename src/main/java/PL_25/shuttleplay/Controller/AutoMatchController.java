@@ -10,6 +10,7 @@ import PL_25.shuttleplay.Service.AutoMatchService;
 import PL_25.shuttleplay.Service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,9 @@ public class AutoMatchController {
 
     @Autowired(required = false)  // 선택적 주입
     private MessageService messageService;
+
+    @Value("${message.enabled:false}")  // 메세지 서비스 api key 없을때 실행안되도록 설정값 추가
+    private boolean messageEnabled;
 
     @PostMapping("/queue/gym")
     public ResponseEntity<Map<String, Object>> registerGymQueue(@RequestParam Long userId,
@@ -78,18 +82,19 @@ public class AutoMatchController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
 
-//        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요, 최종 테스트 시 주석제거 또는 properties enable 수정)
-//        // messageService가 null이 아닐 때만 문자 전송
-//        if (messageService != null) {
-//            for (GameParticipant participant : game.getParticipants()) {
-//                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
-//                String to = user.getPhone();
-//                String text = "[셔틀플레이] " + user.getName() + "님! "
-//                        + game.getDate() + " " + game.getTime() + "에 "
-//                        + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
-//                messageService.sendMessage(to, text);
-//            }
-//        }
+        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요)
+        // messageService가 null이 아닐 때, messageEnabled가 활성화 되어있을때 만 문자 전송
+        // 참가자 목록도 null 아닐때 전송
+        if (messageEnabled && messageService != null && game.getParticipants() != null) {
+            for (GameParticipant participant : game.getParticipants()) {
+                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
+                String to = user.getPhone();
+                String text = "[셔틀플레이] " + user.getName() + "님! "
+                        + game.getDate() + " " + game.getTime() + "에 "
+                        + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
+                messageService.sendMessage(to, text);
+            }
+        }
 
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
@@ -108,18 +113,19 @@ public class AutoMatchController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
 
-//        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요, 최종 테스트 시 주석제거)
-//        // messageService가 null이 아닐 때만 문자 전송
-//        if (messageService != null) {
-//            for (GameParticipant participant : game.getParticipants()) {
-//                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
-//                String to = user.getPhone();
-//                String text = "[셔틀플레이] " + user.getName() + "님! "
-//                        + game.getDate() + " " + game.getTime() + "에 "
-//                        + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
-//                messageService.sendMessage(to, text);
-//            }
-//        }
+        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요)
+        // messageService가 null이 아닐 때, messageEnabled가 활성화 되어있을때 만 문자 전송
+        // 참가자 목록도 null 아닐때 전송
+        if (messageEnabled && messageService != null && game.getParticipants() != null) {
+            for (GameParticipant participant : game.getParticipants()) {
+                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
+                String to = user.getPhone();
+                String text = "[셔틀플레이] " + user.getName() + "님! "
+                        + game.getDate() + " " + game.getTime() + "에 "
+                        + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
+                messageService.sendMessage(to, text);
+            }
+        }
 
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
