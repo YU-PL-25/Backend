@@ -57,72 +57,92 @@ public class AutoMatchService {
         }
     }
 
-   // 통합된 매칭 큐 등록
-   public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request) {
-       NormalUser user = normalUserRepository.findById(userId)
-               .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"));
+    // 통합된 매칭 큐 등록
+    public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request) {
+        NormalUser user = normalUserRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"));
 
-       if (request.getLocation() == null ||
-               request.getLocation().getCourtName() == null ||
-               request.getLocation().getCourtAddress() == null) {
-           throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "코트 이름과 주소는 필수입니다.");
-       }
+        // location 필드 입력되었는지 검사
+        if (request.getLocation() == null ||
+                request.getLocation().getCourtName() == null ||
+                request.getLocation().getCourtAddress() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "코트 이름과 주소는 필수입니다.");
+        }
 
-       Long roomId = user.getGameRoom() != null ? user.getGameRoom().getGameRoomId() : null;
+        // 해당 유저가 이미 room에 입장되어있는지 검사
+        Long roomId = user.getGameRoom() != null ? user.getGameRoom().getGameRoomId() : null;
 
-       if (roomId != null &&
-               matchQueueRepository.existsByUser_UserIdAndGameRoom_GameRoomIdAndMatchedFalse(userId, roomId)) {
-           throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 해당 게임방에 매칭 등록이 되어있습니다.");
-       }
+        if (roomId != null &&
+                matchQueueRepository.existsByUser_UserIdAndGameRoom_GameRoomIdAndMatchedFalse(userId, roomId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 해당 게임방에 매칭 등록이 되어있습니다.");
+        }
 
-       if (matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(userId)) {
-           throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 다른 게임방에 매칭 등록이 되어있습니다.");
-       }
+        if (matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(userId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 다른 게임방에 매칭 등록이 되어있습니다.");
+        }
 
-       MatchQueueEntry entry = new MatchQueueEntry();
-       entry.setUser(user);
+        // 대기열 엔트리 객체 생성
+        MatchQueueEntry entry = new MatchQueueEntry();
+        entry.setUser(user);
 
-       ProfileDTO dto = request.getProfile();
-       Profile profile = new Profile();
-       profile.setGameType(dto.getGameType());
-       profile.setAgeGroup(dto.getAgeGroup());
-       profile.setPlayStyle(dto.getPlayStyle());
-       entry.setProfile(profile);
+        // 해당 유저의 profile 정보 가져오기
+        Profile profile = user.getProfile(); // DB에서 가져오기
+        if (profile == null) {
+            // DB에 없으면 dto 요청에서 가져옴
+            ProfileDTO dto = request.getProfile();
+            if (dto == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "프로필 정보가 없습니다. DB에도 없고 요청에도 없습니다.");
+            }
 
-       MMRDTO mmrDto = request.getMmr();
-       MMR mmr = new MMR();
-       mmr.setRating(mmrDto.getRating());
-       mmr.setTolerance(mmrDto.getTolerance());
-       entry.setMmr(mmr);
+            profile = new Profile();
+            profile.setGameType(dto.getGameType());
+            profile.setAgeGroup(dto.getAgeGroup());
+            profile.setPlayStyle(dto.getPlayStyle());
+        }
+        entry.setProfile(profile); // 큐 엔트리에 등록
 
-       entry.setLocation(request.getLocation());
-       entry.setIsPrematched(request.isPreMatch());
-       entry.setMatched(false);
+        // 해당 유저의 MMR 정보 가져오기 (DB에 있으면 가져오고, 없으면 request dto로 입력받은거 사용)
+        MMR mmr = user.getMmr();
+        if (mmr == null) {
+            MMRDTO mmrDto = request.getMmr();
+            if (mmrDto == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "MMR 정보가 없습니다. DB에도 없고 요청에도 없습니다.");
+            }
 
-       if (request.isPreMatch()) {
-           // 사전매칭 큐 등록
-           entry.setMatchType(MatchQueueType.QUEUE_PRE);
-           entry.setDate(request.getDate());
-           entry.setTime(request.getTime());
-           entry.setGameRoom(null);
-       } else {
-           // 현장매칭 큐 등록
-           entry.setMatchType(MatchQueueType.QUEUE_LIVE);
-           entry.setDate(LocalDate.now());
-           entry.setTime(LocalTime.now());
+            mmr = new MMR();
+            mmr.setRating(mmrDto.getRating());
+            mmr.setTolerance(mmrDto.getTolerance());
+        }
+        entry.setMmr(mmr);
 
-           if (user.getGameRoom() != null) {
-               entry.setGameRoom(user.getGameRoom());
-           }
-       }
+        entry.setLocation(request.getLocation());
+        entry.setIsPrematched(request.isPreMatch());
+        entry.setMatched(false);
 
-       MatchQueueEntry savedEntry = matchQueueRepository.save(entry);
-       return new MatchQueueResponse(savedEntry);
-   }
+        if (request.isPreMatch()) {
+            // 사전매칭 큐 등록
+            entry.setMatchType(MatchQueueType.QUEUE_PRE);
+            entry.setDate(request.getDate());
+            entry.setTime(request.getTime());
+            entry.setGameRoom(null);
+        } else {
+            // 현장매칭 큐 등록
+            entry.setMatchType(MatchQueueType.QUEUE_LIVE);
+            entry.setDate(LocalDate.now());
+            entry.setTime(LocalTime.now());
+
+            if (user.getGameRoom() != null) {
+                entry.setGameRoom(user.getGameRoom());
+            }
+        }
+
+        MatchQueueEntry savedEntry = matchQueueRepository.save(entry);
+        return new MatchQueueResponse(savedEntry);
+    }
 
     // 매칭 큐 등록 취소
     public void cancelQueueEntry(Long userId) {
-    List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
+        List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
 
         if (entries.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 큐에 등록된 유저가 없습니다.");
@@ -203,7 +223,7 @@ public class AutoMatchService {
                     history.setCompleted(false);
                     gameHistoryRepository.save(history);
 
-                   // 큐 상태 업데이트
+                    // 큐 상태 업데이트
                     matchedGroup.forEach(q -> {
                         q.setMatched(true);
                         q.setIsPrematched(true);
@@ -377,7 +397,7 @@ public class AutoMatchService {
     // ========================== 유사도 계산 ==========================
     private boolean isNearby(Location a, Location b) {
         return GeoUtil.calculateDistance(a.getLatitude(), a.getLongitude(),
-                                         b.getLatitude(), b.getLongitude()) <= 300;
+                b.getLatitude(), b.getLongitude()) <= 300;
     }
 
     private boolean isSimilarEnough(MatchQueueEntry a, MatchQueueEntry b) {
