@@ -98,7 +98,7 @@ public class GameRoomApiController {
 
     // 유저가 참가한 게임방 나가기.
     @DeleteMapping("/api/users/{userId}/game-room")
-    public ResponseEntity<Map<String, Object>> deleteGameRoom(
+    public ResponseEntity<Map<String, Object>> leaveGameRoom(
             @PathVariable("userId") long userId
     ) {
 
@@ -116,6 +116,32 @@ public class GameRoomApiController {
         } catch (NoSuchElementException e) {
             response.put("status", 400);
             response.put("error", "유저의 게임방 나가기가 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 게임방 삭제.
+    @DeleteMapping("/api/game-room/{gameRoomId}")
+    public ResponseEntity<Map<String, Object>> deleteGameRoom(
+            @PathVariable("gameRoomId") long gameRoomId
+    ) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            gameRoomService.deleteGameRoom(gameRoomId);
+
+            response.put("status", 200);
+            response.put("message", "게임방 삭제에 성공했습니다.");
+            response.put("gameRoomId", gameRoomId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (NoSuchElementException e) {
+
+            response.put("status", 400);
+            response.put("error", "게임방 삭제에 실패했습니다.");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }

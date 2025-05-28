@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -130,5 +131,16 @@ public class GameRoomService {
         user.setGameRoom(null);
 
         return gameRoom;
+    }
+
+
+    // 게임방 삭제.
+    @Transactional
+    public void deleteGameRoom(long gameRoomId) {
+
+        GameRoom gameRoom = gameRoomRepository.findById(gameRoomId)
+                .orElseThrow(() -> new NoSuchElementException("해당 게임방 없음"));
+
+        gameRoomRepository.delete(gameRoom);
     }
 }
