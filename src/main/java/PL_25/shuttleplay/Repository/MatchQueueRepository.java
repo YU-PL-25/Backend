@@ -16,6 +16,7 @@ public interface MatchQueueRepository extends JpaRepository<MatchQueueEntry, Lon
     // 전체 큐에서 아직 매칭되지 않은 모든 사용자
     List<MatchQueueEntry> findByMatchedFalseAndMatchType(MatchQueueType matchType);
 
+    // 특정 매칭 타입에 해당하면서, 매칭도 안 되었고, 게임방에도 배정되지 않은 사용자들을 조회
     List<MatchQueueEntry> findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType matchType);
 
     // 유저 ID로 큐 검색 (게임방 관계 무시)
@@ -23,12 +24,6 @@ public interface MatchQueueRepository extends JpaRepository<MatchQueueEntry, Lon
 
     // 단일 userId용 추가
     List<MatchQueueEntry> findByUser_UserIdAndMatchedFalse(Long userId);
-
-    // 구장 기준 수동 매칭 (방에 속한 유저들 중에서 선택)
-    List<MatchQueueEntry> findByGameRoom_GameRoomIdAndUser_UserIdInAndMatchedFalse(Long roomId, List<Long> userIds);
-
-    // 동네 기준 수동 매칭 (아직 방 없는 유저들 중에서 선택)
-    List<MatchQueueEntry> findByGameRoomIsNullAndUser_UserIdInAndMatchedFalse(List<Long> userIds);
 
     // 매칭 안되고, 다른 게임방 큐에 대기중이지 않고, 진행중인 게임에 참여하는지
     boolean existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(Long userId);

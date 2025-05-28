@@ -1,14 +1,17 @@
 package PL_25.shuttleplay.Controller;
 
+import PL_25.shuttleplay.Entity.Game.GameRoom;
+import PL_25.shuttleplay.Service.GameRoomService;
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.GameRoomJoinDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
-import PL_25.shuttleplay.Entity.Game.GameRoom;
-import PL_25.shuttleplay.Service.GameRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +42,7 @@ public class GameRoomApiController {
             response.put("status", 200);
             response.put("message", "현장 매칭(구장) 게임방이 성공적으로 생성되었습니다.");
             response.put("gameRoomId", gameRoom.getGameRoomId());
+            response.put("managerId", gameRoom.getCreatedBy().getUserId()); // 방장 id 같이 반환
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } else {
             response.put("status", 400);
@@ -62,6 +66,7 @@ public class GameRoomApiController {
             response.put("status", 200);
             response.put("message", "사전 매칭(구장) 게임방이 성공적으로 생성되었습니다.");
             response.put("gameRoomId", gameRoom.getGameRoomId());
+            response.put("managerId", gameRoom.getCreatedBy().getUserId()); // 방장 id 같이 반환
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } else {
             response.put("status", 400);

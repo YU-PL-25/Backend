@@ -30,7 +30,7 @@ public class GameRoomService {
     @Transactional
     public GameRoom putCurrentMatchingGameRoom(CurrentMatchingGameRoomDTO gameRoomDTO) {
 
-
+        // 1. 방장 user 조회
         // pk로 방장 NormalUser 가져오기
         NormalUser master = normalUserRepository
                 .findById(gameRoomDTO.getMasterId()).orElse(null);
@@ -39,20 +39,25 @@ public class GameRoomService {
             return null;
         }
 
+        // 2. 위치 정보 생성 또는 재사용
         // Location이 db에 있으면 새로 만들고 반환, 이미 있으면 그거 반환.
         Location selectedLocation = locationService.findOrCreateLocation(gameRoomDTO.getLocation());
 
+        // 3. GameRoom 생성 (createdBy = master)
         // 프론트에서 가져온 데이터로 GameRoom 엔티티 생성.
         GameRoom gameRoom = GameRoom.builder()
                 .location(selectedLocation)
                 .date(LocalDate.now())
                 .time(LocalTime.now())
+                .createdBy(master) // 방장 저장
                 .build();
 
-        // 방장의 GameRoom 설정.
+        // 4. 방장의 게임방 등록 및 role 지정
         master.setGameRoom(gameRoom);
+        master.setRole("manager"); // 방장 권한 부여
+        normalUserRepository.save(master);
 
-        // db에 저장하기.
+        // 5. db에 게임방 저장
         return gameRoomRepository.save(gameRoom);
     }
 
@@ -64,6 +69,7 @@ public class GameRoomService {
         // Location이 db에 있으면 새로 만들고 있으면 반환. (여기선 무시)
         locationService.findOrCreateLocation(gameRoomDTO.getLocation());
 
+        // 1. 방장 user 조회
         // pk로 방장 NormalUser 가져오기
         NormalUser master = normalUserRepository
                 .findById(gameRoomDTO.getMasterId()).orElse(null);
@@ -73,20 +79,25 @@ public class GameRoomService {
             return null;
         }
 
+        // 2. 위치 정보 생성 또는 재사용
         // Location이 db에 있으면 새로 만들고 반환, 이미 있으면 그거 반환.
         Location selectedLocation = locationService.findOrCreateLocation(gameRoomDTO.getLocation());
 
+        // 3. GameRoom 생성 (createdBy = master)
         // 프론트에서 가져온 데이터로 GameRoom 엔티티 생성.
         GameRoom gameRoom = GameRoom.builder()
                 .location(selectedLocation)
                 .date(gameRoomDTO.getLocalDate())
                 .time(gameRoomDTO.getLocalTime())
+                .createdBy(master) // 방장 저장
                 .build();
 
-        // 방장의 GameRoom 설정.
+        // 4. 방장의 게임방 등록 및 role 지정
         master.setGameRoom(gameRoom);
+        master.setRole("manager"); // 방장 권한 부여
+        normalUserRepository.save(master);
 
-        // db에 저장하기.
+        // 5. db에 게임방 저장
         return gameRoomRepository.save(gameRoom);
     }
 

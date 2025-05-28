@@ -33,11 +33,10 @@ public class AutoMatchController {
     @Value("${message.enabled:false}")  // 메세지 서비스 api key 없을때 실행안되도록 설정값 추가
     private boolean messageEnabled;
 
+    // 구장 매칭 큐 등록 (날짜/시간은 자동으로 현재 시각, 위치는 게임방으로 설정)
     @PostMapping("/queue/gym")
     public ResponseEntity<Map<String, Object>> registerGymQueue(@RequestParam Long userId,
                                                                 @RequestBody AutoMatchRequest request) {
-        request.setDate(null);
-        request.setTime(null);
         MatchQueueResponse response = autoMatchService.registerToQueue(userId, request);
         Map<String, Object> result = new HashMap<>();
         result.put("message", "매칭 큐 등록되었습니다.");
@@ -48,6 +47,7 @@ public class AutoMatchController {
         return ResponseEntity.ok(result);
     }
 
+    // 사전 동네 자동 게임방 생성 매칭 큐 등록 (사용자가 위치, 날짜, 시간 직접 선택)
     @PostMapping("/queue/location")
     public ResponseEntity<Map<String, Object>> registerLocationQueue(@RequestParam Long userId,
                                                                      @RequestBody AutoMatchRequest request) {
@@ -64,6 +64,7 @@ public class AutoMatchController {
         return ResponseEntity.ok(result);
     }
 
+    // 매칭 큐 등록 취소(게임 시작 전)
     @DeleteMapping("/queue")
     public ResponseEntity<Map<String, Object>> cancelQueue(@RequestParam Long userId) {
         autoMatchService.cancelQueueEntry(userId);
@@ -75,38 +76,8 @@ public class AutoMatchController {
         );
     }
 
-    @PostMapping("/pre-court/{roomId}")
-    public ResponseEntity<Map<String, Object>> matchPreCourtInRoom(@PathVariable Long roomId) {
-        Game game = autoMatchService.matchPreCourtFromRoom(roomId);
-        if (game == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
-        }
-
-        // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요)
-        // messageService가 null이 아닐 때, messageEnabled가 활성화 되어있을때 만 문자 전송
-        // 참가자 목록도 null 아닐때 전송
-        if (messageEnabled && messageService != null && game.getParticipants() != null) {
-            for (GameParticipant participant : game.getParticipants()) {
-                NormalUser user = participant.getUser();    // 게임참가자 리스트에 들어있는 개별 사용자 접근
-                String to = user.getPhone();
-                String text = "[셔틀플레이] " + user.getName() + "님! "
-                        + game.getDate() + " " + game.getTime() + "에 "
-                        + game.getLocation().getCourtName() + "에서 경기 매칭이 완료되었습니다!";
-                messageService.sendMessage(to, text);
-            }
-        }
-
-        return ResponseEntity.ok(Map.of(
-                "message", "매칭 되었습니다.",
-                "gameId", game.getGameId(),
-                "userIds", game.getParticipants().stream().map(u -> u.getUserId()).toList(),
-                "location", game.getLocation(),
-                "date", game.getDate(),
-                "time", game.getTime()
-        ));
-    }
-
-    @PostMapping("/live/{roomId}")
+    // 구장 자동 매칭(사전/현장 게임방 다 적용)
+    @PostMapping("/games/{roomId}")
     public ResponseEntity<Map<String, Object>> matchLiveInRoom(@PathVariable Long roomId) {
         Game game = autoMatchService.matchLiveCourtFromRoom(roomId);
         if (game == null) {
@@ -137,7 +108,8 @@ public class AutoMatchController {
         ));
     }
 
-    @PostMapping("/pre-location")
+    // 사전 동네 매칭(자동) - 유저가 대기열에 등록한 뒤, 날짜+시간+위치(300m 이내) 조건에 맞는 유저들과 게임방 자동 생성
+    @PostMapping("/rooms/location")
     public ResponseEntity<Map<String, Object>> matchPreLocation(@RequestParam Long userId,
                                                                 @RequestBody AutoMatchRequest request) {
         GameRoom room = autoMatchService.createPreLocationMeetingRoomFromUser(
@@ -146,16 +118,19 @@ public class AutoMatchController {
                 request.getTime(),
                 request.getLocation()
         );
+
         if (room == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
-        return ResponseEntity.ok(Map.of(
-                "message", "매칭 되었습니다.",
-                "gameRoomId", room.getGameRoomId(),
-                "userIds", room.getParticipants().stream().map(u -> u.getUserId()).toList(),
-                "location", room.getLocation(),
-                "date", room.getDate(),
-                "time", room.getTime()
-        ));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "게임방이 생성되었습니다.");
+        response.put("gameRoomId", room.getGameRoomId());
+        response.put("userIds", room.getParticipants().stream().map(NormalUser::getUserId).toList());
+        response.put("location", room.getLocation());
+        response.put("date", room.getDate());
+        response.put("time", room.getTime());
+
+        return ResponseEntity.ok(response);
     }
 }
