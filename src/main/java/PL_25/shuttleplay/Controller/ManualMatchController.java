@@ -73,56 +73,43 @@ public class ManualMatchController {
         return ResponseEntity.ok(Map.of("message", "취소 완료", "status", 200));
     }
 
-    // 사전 수동 매칭 (구장 기준) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
-    @PostMapping("/create/manual-game")
-    public ResponseEntity<Map<String, Object>> createManualGame(@RequestParam Long roomId,
-                                                                @RequestParam Long requesterId,
-                                                                @RequestBody Map<String, Object> body) {
-        // 1. 게임방 조회
-        GameRoom room = manualMatchService.getGameRoomById(roomId);
+    // 특정 게임방에 등록된 매칭 큐 사용자 목록 조회 (수동 매칭용)
+    @GetMapping("/queue-users")
+    public ResponseEntity<Map<String, Object>> getUsersInQueueByRoom(@RequestParam Long roomId) {
+        // 해당 게임방 ID 기준으로 큐에서 아직 매칭되지 않은 유저 목록 조회
+        List<MatchQueueEntry> entries = matchQueueRepository.findByMatchedFalseAndGameRoom_GameRoomId(roomId);
 
-        // 2. 요청 바디에서 사용자 ID 목록과 날짜/시간 추출
-        List<Integer> userIds = (List<Integer>) body.get("userIds");
-        String dateStr = (String) body.get("date");
-        String timeStr = (String) body.get("time");
+        // 필요한 유저 정보만 추려서 반환
+        List<Map<String, Object>> userList = entries.stream().map(entry -> {
+            NormalUser user = entry.getUser();
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("userId", user.getUserId());
+            userInfo.put("nickname", user.getNickname());
+            userInfo.put("rank", user.getRank());
+            return userInfo;
+        }).toList();
 
-        // 3. 문자열 → LocalDate/LocalTime 변환
-        LocalDate date = (dateStr != null) ? LocalDate.parse(dateStr) : null;
-        LocalTime time = (timeStr != null) ? LocalTime.parse(timeStr) : null;
-
-        // 4. 사용자 ID 정수형 리스트 → Long 타입 변환
-        List<Long> longUserIds = userIds.stream().map(Integer::longValue).toList();
-
-        // 5. 수동 매칭 실행 (요청자 ID를 통해 방장인지 검증)
-        Game game = manualMatchService.createManualGameFromRoom(room, longUserIds, date, time, requesterId);
-
-        // 6. 응답 반환 (managerId 포함)
         return ResponseEntity.ok(Map.of(
-                "message", "매칭 되었습니다.",
-                "gameId", game.getGameId(),
-                "userIds", longUserIds,
-                "managerId", requesterId,
-                "location", game.getLocation(),
-                "date", game.getDate(),
-                "time", game.getTime()
+                "roomId", roomId,
+                "queuedUsers", userList
         ));
     }
 
-    // 현장 수동 매칭(구장 기준) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
+    // 수동 매칭(구장 기준, 사전 현장 다 적용) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
     @PostMapping("/create/live-game")
     public ResponseEntity<Map<String, Object>> createLiveGame(@RequestParam Long roomId,
                                                               @RequestParam Long requesterId,
                                                               @RequestBody Map<String, List<Long>> body) {
-        // 1. 매칭 대상 유저 ID 목록 추출
+        // 매칭 대상 유저 ID 목록 추출
         List<Long> userIds = body.get("userId");
 
-        // 2. 게임방 조회
+        // 게임방 조회
         GameRoom room = manualMatchService.getGameRoomById(roomId);
 
-        // 3. 수동 매칭 실행 (requesterId를 통해 방장인지 검증)
+        // 수동 매칭 실행 (requesterId를 통해 방장인지 검증)
         Game game = manualMatchService.createLiveGameFromRoom(room, userIds, requesterId);
 
-        // 4. 응답 반환 (현재 시각 기준 경기 생성, managerId 포함)
+        // 응답 반환 (현재 시각 기준 경기 생성, managerId 포함)
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
                 "gameId", game.getGameId(),
@@ -138,10 +125,10 @@ public class ManualMatchController {
     @PostMapping("/queue/location-and-rooms")
     public ResponseEntity<Map<String, Object>> registerAndGetNearbyRooms(@RequestParam Long userId,
                                                                          @RequestBody ManualMatchRequest request) {
-        // 1. 큐 등록
+        // 큐 등록
         MatchQueueResponse response = manualMatchService.registerToQueue(userId, request);
 
-        // 2. 300m 이내 동일 시간대 게임방 검색
+        // 300m 이내 동일 시간대 게임방 검색
         List<GameRoom> nearbyRooms = manualMatchService.findNearbyRooms(
                 request.getLocation().getLatitude(),
                 request.getLocation().getLongitude(),
@@ -213,7 +200,6 @@ public class ManualMatchController {
                 courtName, courtAddress, latitude, longitude, date, time, userId
         );
 
-        // 클라이언트에 생성 결과 응답
         return ResponseEntity.ok(Map.of(
                 "message", "새 게임방 생성 완료",
                 "gameRoomId", room.getGameRoomId(),
