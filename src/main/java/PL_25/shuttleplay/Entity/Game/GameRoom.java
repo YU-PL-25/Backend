@@ -36,6 +36,8 @@ public class GameRoom {
     @JoinColumn(name = "location_id")
     private Location location;
 
+    private String title;
+
 
     private LocalDate date;
     private LocalTime time;
