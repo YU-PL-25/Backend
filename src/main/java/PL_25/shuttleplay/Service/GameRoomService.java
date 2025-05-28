@@ -143,4 +143,11 @@ public class GameRoomService {
 
         gameRoomRepository.delete(gameRoom);
     }
+
+
+    @Transactional(readOnly = true)
+    public List<GameRoom> selectAllGameRoom() {
+
+        return gameRoomRepository.findAll();
+    }
 }

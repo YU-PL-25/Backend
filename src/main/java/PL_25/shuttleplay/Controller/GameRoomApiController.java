@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -142,6 +143,30 @@ public class GameRoomApiController {
 
             response.put("status", 400);
             response.put("error", "게임방 삭제에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 게임방 전체 조회
+    @GetMapping("/api/game-room")
+    public ResponseEntity<Map<String, Object>> selectAllGameRoom() {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<GameRoom> gameRoomList = gameRoomService.selectAllGameRoom();
+            
+            response.put("status", 200);
+            response.put("message", "게임방 전체 조회에 성공했습니다.");
+            response.put("data", gameRoomList);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (NoSuchElementException e) {
+
+            response.put("status", 400);
+            response.put("error", "게임방 전체 조회에 실패했습니다.");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
