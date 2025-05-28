@@ -9,8 +9,6 @@ import PL_25.shuttleplay.Entity.User.Profile;
 import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
 import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
-import PL_25.shuttleplay.dto.Matching.MMRDTO;
-import PL_25.shuttleplay.dto.Matching.ProfileDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -50,61 +48,42 @@ public class AutoMatchService {
         }
     }
 
-    // 통합된 매칭 큐 등록
-    public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request) {
+    // 통합된 매칭 큐 등록 (gameRoomId는 현장 매칭일 때만 사용)
+    public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request, Long gameRoomId) {
         NormalUser user = normalUserRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"));
 
-        // location 필드 입력되었는지 검사
-        if (request.getLocation() == null ||
-                request.getLocation().getCourtName() == null ||
-                request.getLocation().getCourtAddress() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "코트 이름과 주소는 필수입니다.");
+        // 사전 매칭일 경우 위치 필수
+        if (request.isPreMatch()) {
+            if (request.getLocation() == null ||
+                    request.getLocation().getCourtName() == null ||
+                    request.getLocation().getCourtAddress() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "사전 매칭 시 코트 이름과 주소는 필수입니다.");
+            }
         }
 
-        // 해당 유저가 이미 room에 입장되어있는지 검사
-        Long roomId = user.getGameRoom() != null ? user.getGameRoom().getGameRoomId() : null;
+        // 이미 매칭 큐에 등록된 경우 방어
+        boolean alreadyQueued =
+                matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNull(userId) ||
+                        matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(userId);
 
-        if (roomId != null &&
-                matchQueueRepository.existsByUser_UserIdAndGameRoom_GameRoomIdAndMatchedFalse(userId, roomId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 해당 게임방에 매칭 등록이 되어있습니다.");
+        if (alreadyQueued) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 매칭 큐에 등록된 상태입니다.");
         }
 
-        if (matchQueueRepository.existsByUser_UserIdAndMatchedFalseAndGameRoomIsNotNull(userId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 다른 게임방에 매칭 등록이 되어있습니다.");
-        }
-
-        // 대기열 엔트리 객체 생성
+        // 엔트리 생성
         MatchQueueEntry entry = new MatchQueueEntry();
         entry.setUser(user);
 
-        // 해당 유저의 profile 정보 가져오기
-        Profile profile = user.getProfile(); // DB에서 가져오기
+        Profile profile = user.getProfile();
         if (profile == null) {
-            // DB에 없으면 dto 요청에서 가져옴
-            ProfileDTO dto = request.getProfile();
-            if (dto == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "프로필 정보가 없습니다. DB에도 없고 요청에도 없습니다.");
-            }
-
-            profile = new Profile();
-            profile.setGameType(dto.getGameType());
-            profile.setAgeGroup(dto.getAgeGroup());
-            profile.setPlayStyle(dto.getPlayStyle());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DB에 프로필 정보가 없습니다.");
         }
-        entry.setProfile(profile); // 큐 엔트리에 등록
+        entry.setProfile(profile);
 
-        // 해당 유저의 MMR 정보 가져오기 (DB에 있으면 가져오고, 없으면 request dto로 입력받은거 사용)
         MMR mmr = user.getMmr();
         if (mmr == null) {
-            MMRDTO mmrDto = request.getMmr();
-            if (mmrDto == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "MMR 정보가 없습니다. DB에도 없고 요청에도 없습니다.");
-            }
-
-            mmr = new MMR();
-            mmr.setRating(mmrDto.getRating());
-            mmr.setTolerance(mmrDto.getTolerance());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DB에 MMR 정보가 없습니다.");
         }
         entry.setMmr(mmr);
 
@@ -113,29 +92,26 @@ public class AutoMatchService {
         entry.setMatched(false);
 
         if (request.isPreMatch()) {
-            // 사전매칭 큐 등록
+            // 사전 매칭 큐 등록 (게임방 생성용)
             entry.setMatchType(MatchQueueType.QUEUE_PRE);
             entry.setDate(request.getDate());
             entry.setTime(request.getTime());
             entry.setGameRoom(null);
         } else {
-            // 현장매칭 큐 등록 (날짜/시간/거리 고려하지 않음)
+            // 현장 매칭 큐 등록 (게임 생성용)
             entry.setMatchType(MatchQueueType.QUEUE_LIVE);
-            entry.setDate(null); // 날짜 무시
-            entry.setTime(null); // 시간 무시
+            entry.setDate(LocalDate.now());
+            entry.setTime(LocalTime.now());
 
-            // 반드시 GameRoom이 있어야 함
-            if (user.getGameRoom() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "현장 매칭을 위해 게임방이 필요합니다.");
-            }
-
-            entry.setGameRoom(user.getGameRoom());
+            // 명시적으로 gameRoomId 전달받아 등록
+            GameRoom room = gameRoomRepository.findById(gameRoomId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게임방을 찾을 수 없습니다."));
+            entry.setGameRoom(room);
         }
 
-        MatchQueueEntry savedEntry = matchQueueRepository.save(entry);
-        return new MatchQueueResponse(savedEntry);
+        MatchQueueEntry saved = matchQueueRepository.save(entry);
+        return new MatchQueueResponse(saved);
     }
-
 
     // 매칭 큐 등록 취소
     public void cancelQueueEntry(Long userId) {
@@ -147,7 +123,6 @@ public class AutoMatchService {
 
         matchQueueRepository.deleteAll(entries);
     }
-
     // 구장 기준 자동 매칭(현장/사전 전부 해당, 날짜/시간/위치 고려 없이 게임방 기준으로만 매칭)
     public Game matchLiveCourtFromRoom(Long roomId) {
         GameRoom room = gameRoomRepository.findById(roomId)
@@ -190,16 +165,31 @@ public class AutoMatchService {
                 game.setLocation(room.getLocation());
                 Game savedGame = gameRepository.save(game);
 
-                // 참가자 저장
-                List<GameParticipant> participants = matchedGroup.stream().map(entry -> {
-                    GameParticipant p = new GameParticipant();
-                    p.setGame(savedGame);
-                    p.setUser(entry.getUser());
-                    return p;
-                }).toList();
-                gameParticipantRepository.saveAll(participants);
+                List<GameParticipant> participants = new ArrayList<>();
 
-                // 히스토리 생성
+                for (MatchQueueEntry entry : matchedGroup) {
+                    Long userId = entry.getUser().getUserId();
+                    Long gameId = savedGame.getGameId();
+                    GameParticipantId id = new GameParticipantId(gameId, userId);
+
+                    // 이미 존재하는 객체인지 세션에서 확인
+                    if (gameParticipantRepository.existsById(id)) {
+                        GameParticipant existing = gameParticipantRepository.findById(id).get();
+                        participants.add(existing);
+                    } else {
+                        GameParticipant newParticipant = new GameParticipant(entry.getUser(), savedGame);
+                        participants.add(newParticipant);
+                    }
+                }
+
+                // 게임에도 직접 추가
+                savedGame.setParticipants(participants);
+
+
+                // participants 리스트로 갱신
+                savedGame.setParticipants(participants);
+
+                // GameHistory 생성
                 GameHistory history = new GameHistory();
                 history.setGame(savedGame);
                 history.setScoreTeamA(0);
@@ -225,46 +215,48 @@ public class AutoMatchService {
         return null;
     }
 
-    // 사전매칭 (동네 기준)
-    public GameRoom createPreLocationMeetingRoomFromUser(Long userId, LocalDate date, LocalTime time, Location location) {
-        // 1. 해당 user의 큐 엔트리 가져오기
+    // 사전 매칭 (동네 기준) - 큐에 등록된 정보만으로 자동 매칭 및 게임방 생성
+    public GameRoom createPreLocationMeetingRoomFromUser(Long userId) {
+        // 1. 해당 유저의 매칭 큐 엔트리 조회
         MatchQueueEntry me = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId)
                 .stream()
                 .filter(entry -> entry.getGameRoom() == null)
-                .filter(entry -> entry.getDate().equals(date))
-                .filter(entry -> entry.getTime().equals(time))
                 .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_PRE)
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사전매칭 큐에 등록된 유저가 없습니다."));
 
-        // 2. 나머지 큐에서 매칭 조건(날짜, 시간, 거리)만 필터링
+        // 2. 등록된 정보에서 date, time, location 가져오기
+        LocalDate date = me.getDate();
+        LocalTime time = me.getTime();
+        Location location = me.getLocation();
+
+        // 3. 같은 조건 + 300m 이내 유저들 조회
         List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_PRE)
                 .stream()
                 .filter(other -> !other.getUser().getUserId().equals(userId))
                 .filter(other -> other.getDate().equals(date))
                 .filter(other -> other.getTime().equals(time))
-                .filter(other -> isNearby(location, other.getLocation()))
+                .filter(other -> isNearby(location, other.getLocation())) // 거리 기준
                 .toList();
 
-        // 3. 게임 인원수 기준에 맞게 매칭 시도
+        // 4. 게임 인원 충족 여부 확인
         int required = getRequiredMatchCount(me.getProfile().getGameType());
-        List<MatchQueueEntry> candidates = queue.stream()
-                .limit(required)
-                .toList();
+        List<MatchQueueEntry> candidates = queue.stream().limit(required).toList();
 
         if (candidates.size() == required) {
+            // 5. 최종 매칭 대상 구성
             List<MatchQueueEntry> matchedGroup = new ArrayList<>(candidates);
-            matchedGroup.add(me); // 본인 추가
+            matchedGroup.add(me);
 
-            // 유효성 검사
+            // 6. 유저 상태 확인
             List<Long> userIds = matchedGroup.stream().map(e -> e.getUser().getUserId()).toList();
             validateUsersBeforeMatch(userIds, null);
 
-            // 매칭 상태 변경
+            // 7. 큐 상태 업데이트
             matchedGroup.forEach(e -> e.setMatched(true));
             matchQueueRepository.saveAll(matchedGroup);
 
-            // 게임방 생성
+            // 8. 게임방 생성
             List<NormalUser> users = matchedGroup.stream().map(MatchQueueEntry::getUser).toList();
 
             GameRoom room = new GameRoom();
@@ -275,7 +267,7 @@ public class AutoMatchService {
 
             GameRoom savedRoom = gameRoomRepository.save(room);
 
-            // 유저에 게임방 할당
+            // 9. 유저에 게임방 연결
             users.forEach(u -> u.setGameRoom(savedRoom));
             normalUserRepository.saveAll(users);
 
@@ -285,11 +277,85 @@ public class AutoMatchService {
         return null;
     }
 
+    // 사전 매칭 (구장 기준) - 큐에 등록된 정보만으로 게임방 자동 생성
+    public GameRoom createPreGymMeetingRoomFromUser(Long userId) {
+        // 1. userId로 큐에서 사전 매칭 등록 정보 찾기
+        MatchQueueEntry me = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId)
+                .stream()
+                .filter(entry -> entry.getGameRoom() == null)
+                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_PRE)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사전매칭 큐에 등록된 유저가 없습니다."));
+
+        // 2. 등록된 큐 정보에서 날짜/시간/위치 가져오기
+        LocalDate date = me.getDate();
+        LocalTime time = me.getTime();
+        Location location = me.getLocation();
+
+        // 3. 동일 조건(날짜/시간/위치) 유저 큐 조회
+        List<MatchQueueEntry> queue = matchQueueRepository.findByMatchedFalseAndMatchTypeAndGameRoomIsNull(MatchQueueType.QUEUE_PRE)
+                .stream()
+                .filter(other -> !other.getUser().getUserId().equals(userId))
+                .filter(other -> other.getDate().equals(date))
+                .filter(other -> other.getTime().equals(time))
+                .filter(other -> isSameCourt(location, other.getLocation()))
+                .toList();
+
+        // 4. 인원 수 충족 여부 확인
+        int required = getRequiredMatchCount(me.getProfile().getGameType());
+        List<MatchQueueEntry> candidates = queue.stream().limit(required).toList();
+
+        if (candidates.size() == required) {
+            // 5. 매칭 대상 구성
+            List<MatchQueueEntry> matchedGroup = new ArrayList<>(candidates);
+            matchedGroup.add(me);
+
+            // 6. 유저 상태 검증
+            List<Long> userIds = matchedGroup.stream().map(e -> e.getUser().getUserId()).toList();
+            validateUsersBeforeMatch(userIds, null);
+
+            // 7. 매칭 완료 처리
+            matchedGroup.forEach(e -> e.setMatched(true));
+            matchQueueRepository.saveAll(matchedGroup);
+
+            // 8. 게임방 생성
+            List<NormalUser> users = matchedGroup.stream().map(MatchQueueEntry::getUser).toList();
+
+            GameRoom room = new GameRoom();
+            room.setDate(date);
+            room.setTime(time);
+            room.setLocation(location);
+            room.setParticipants(users);
+
+            GameRoom savedRoom = gameRoomRepository.save(room);
+
+            // 9. 유저에게 게임방 지정
+            users.forEach(u -> u.setGameRoom(savedRoom));
+            normalUserRepository.saveAll(users);
+
+            return savedRoom;
+        }
+
+        // 매칭 실패 시 null 반환
+        return null;
+    }
+
+    // 구장 위치가 같은지 확인 (이름 + 주소 + 좌표는 허용 오차 내일 때)
+    private boolean isSameCourt(Location a, Location b) {
+        final double TOLERANCE = 0.0003; // 약 30m 이내
+
+        return a.getCourtName().equals(b.getCourtName())
+                && a.getCourtAddress().equals(b.getCourtAddress())
+                && Math.abs(a.getLatitude() - b.getLatitude()) <= TOLERANCE
+                && Math.abs(a.getLongitude() - b.getLongitude()) <= TOLERANCE;
+    }
+
     // 300m 거리 이내 인지 확인
     private boolean isNearby(Location a, Location b) {
         return GeoUtil.calculateDistance(a.getLatitude(), a.getLongitude(),
                 b.getLatitude(), b.getLongitude()) <= 300;
     }
+
     // 유사도 계산
     private boolean isSimilarEnough(MatchQueueEntry a, MatchQueueEntry b) {
         return calculateSimilarity(a, b) >= 0.5;

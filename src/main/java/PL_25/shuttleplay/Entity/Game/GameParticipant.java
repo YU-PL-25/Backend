@@ -24,6 +24,14 @@ public class GameParticipant {
     @Enumerated(EnumType.STRING)
     private TeamType team;
 
+    public GameParticipant() {
+    }
+
+    public GameParticipant(NormalUser user, Game game) {
+        this.user = user;
+        this.game = game;
+    }
+
     public Long getUserId() {
         return user != null ? user.getUserId() : null;
     }

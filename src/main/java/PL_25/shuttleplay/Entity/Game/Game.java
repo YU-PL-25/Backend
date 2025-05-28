@@ -10,6 +10,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -29,7 +30,7 @@ public class Game {
 
     // GameParticipant 엔티티 생성으로 매핑 수정
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
-    private List<GameParticipant> participants;
+    private List<GameParticipant> participants = new ArrayList<>();
 
     private LocalDate date;
     private LocalTime time;

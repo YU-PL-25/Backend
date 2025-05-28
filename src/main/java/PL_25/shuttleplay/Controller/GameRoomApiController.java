@@ -8,10 +8,7 @@ import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -75,7 +72,6 @@ public class GameRoomApiController {
         }
     }
 
-
     // 이미 생성되어 있는 방에 참가 요청
     @PostMapping("/api/rooms/{roomId}/join")
     public ResponseEntity<Map<String, Object>> joinGameRoom(
@@ -99,7 +95,6 @@ public class GameRoomApiController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
-
 
     // 유저가 참가한 게임방 나가기.
     @DeleteMapping("/api/users/{userId}/game-room")

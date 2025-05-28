@@ -8,6 +8,7 @@ import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Entity.Game.MatchQueueResponse;
 import PL_25.shuttleplay.Service.AutoMatchService;
 import PL_25.shuttleplay.Service.MessageService;
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,22 +37,25 @@ public class AutoMatchController {
     // 구장 매칭 큐 등록 (날짜/시간은 자동으로 현재 시각, 위치는 게임방으로 설정)
     @PostMapping("/queue/gym")
     public ResponseEntity<Map<String, Object>> registerGymQueue(@RequestParam Long userId,
+                                                                @RequestParam Long gameRoomId,
                                                                 @RequestBody AutoMatchRequest request) {
-        MatchQueueResponse response = autoMatchService.registerToQueue(userId, request);
+        MatchQueueResponse response = autoMatchService.registerToQueue(userId, request, gameRoomId);
+
         Map<String, Object> result = new HashMap<>();
         result.put("message", "매칭 큐 등록되었습니다.");
+        result.put("isPrematched", response.isPrematched());
         result.put("userId", response.getUserId());
-        if (response.getGameRoomId() != null) {
-            result.put("gameRoomId", response.getGameRoomId());
-        }
+        result.put("gameRoomId", response.getGameRoomId());
         return ResponseEntity.ok(result);
     }
 
-    // 사전 동네 자동 게임방 생성 매칭 큐 등록 (사용자가 위치, 날짜, 시간 직접 선택)
-    @PostMapping("/queue/location")
+    // (자동)사전 동네 게임방 (사용자가 위치, 날짜, 시간 직접 선택)
+    // & 사전 구장 게임방 생성 매칭 큐 등록(사용자가 코트명/주소/날짜/시간 직접 선택)
+    @PostMapping("/queue/location-preGym")
     public ResponseEntity<Map<String, Object>> registerLocationQueue(@RequestParam Long userId,
+                                                                     @RequestParam Long gameRoomId,
                                                                      @RequestBody AutoMatchRequest request) {
-        MatchQueueResponse response = autoMatchService.registerToQueue(userId, request);
+        MatchQueueResponse response = autoMatchService.registerToQueue(userId, request, gameRoomId);
         Map<String, Object> result = new HashMap<>();
         result.put("message", "매칭 큐 등록되었습니다.");
         result.put("userId", response.getUserId());
@@ -110,14 +114,8 @@ public class AutoMatchController {
 
     // 사전 동네 매칭(자동) - 유저가 대기열에 등록한 뒤, 날짜+시간+위치(300m 이내) 조건에 맞는 유저들과 게임방 자동 생성
     @PostMapping("/rooms/location")
-    public ResponseEntity<Map<String, Object>> matchPreLocation(@RequestParam Long userId,
-                                                                @RequestBody AutoMatchRequest request) {
-        GameRoom room = autoMatchService.createPreLocationMeetingRoomFromUser(
-                userId,
-                request.getDate(),
-                request.getTime(),
-                request.getLocation()
-        );
+    public ResponseEntity<Map<String, Object>> matchPreLocation(@RequestParam Long userId) {
+        GameRoom room = autoMatchService.createPreLocationMeetingRoomFromUser(userId);
 
         if (room == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
@@ -133,4 +131,25 @@ public class AutoMatchController {
 
         return ResponseEntity.ok(response);
     }
+
+    // 사전 구장 매칭(자동) - 유저가 대기열에 등록한 뒤, 동일 구장/날짜/시간 조건에 맞는 유저들과 게임방 자동 생성
+    @PostMapping("/rooms/gym")
+    public ResponseEntity<Map<String, Object>> matchPreGym(@RequestParam Long userId) {
+        GameRoom room = autoMatchService.createPreGymMeetingRoomFromUser(userId);
+
+        if (room == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
+        }
+
+        // 매칭 성공 시 게임방 정보 응답
+        return ResponseEntity.ok(Map.of(
+                "message", "게임방이 생성되었습니다.",
+                "gameRoomId", room.getGameRoomId(),
+                "userIds", room.getParticipants().stream().map(NormalUser::getUserId).toList(),
+                "location", room.getLocation(),
+                "date", room.getDate(),
+                "time", room.getTime()
+        ));
+    }
+
 }
