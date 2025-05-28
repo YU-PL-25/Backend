@@ -95,9 +95,9 @@ public class ManualMatchController {
         ));
     }
 
-    // 수동 매칭(구장 기준, 사전 현장 다 적용) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
-    @PostMapping("/create/live-game")
-    public ResponseEntity<Map<String, Object>> createLiveGame(@RequestParam Long roomId,
+    // 구장 수동 매칭(사전/현장 게임방 다 적용) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
+    @PostMapping("/games/{roomId}")
+    public ResponseEntity<Map<String, Object>> createLiveGame(@PathVariable Long roomId,
                                                               @RequestParam Long requesterId,
                                                               @RequestBody Map<String, List<Long>> body) {
         // 매칭 대상 유저 ID 목록 추출
@@ -144,8 +144,9 @@ public class ManualMatchController {
     }
 
     // 사전 수동 매칭 (동네 기준) - 방 목록에서 게임방 참가
-    @PostMapping("/join-room")
-    public ResponseEntity<Map<String, Object>> joinRoom(@RequestParam Long userId, @RequestParam Long roomId) {
+    @PostMapping("/rooms/location/{roomId}/join")
+    public ResponseEntity<Map<String, Object>> joinRoom(@PathVariable Long roomId,
+                                                        @RequestParam Long userId) {
         GameRoom room = gameRoomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("방을 찾을 수 없습니다."));
         NormalUser user = normalUserRepository.findById(userId)
@@ -176,9 +177,9 @@ public class ManualMatchController {
                 "gameRoomId", roomId
         ));
     }
-    // 사전 수동 매칭 (동네 기준)
-    // 방 목록에서 새로운 게임방 생성
-    @PostMapping("/create/location-room")
+
+    // 사전 수동 매칭 (동네 기준) - 방 목록에서 새로운 게임방 생성
+    @PostMapping("/rooms/location")
     public ResponseEntity<Map<String, Object>> createLocationRoom(@RequestBody Map<String, Object> body) {
         // 장소 정보 (이름, 주소)
         String courtName = (String) body.get("courtName");
