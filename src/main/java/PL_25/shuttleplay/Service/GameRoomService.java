@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -104,6 +105,29 @@ public class GameRoomService {
 
         // 둘다 있으면 유저의 GameRoom 설정.
         user.setGameRoom(gameRoom);
+
+        return gameRoom;
+    }
+
+
+    // 유저가 참가한 방 나가기.
+    @Transactional
+    public GameRoom leaveGameRoom(long userId) {
+
+        // 해당 user가 없으면 throw.
+        NormalUser user = normalUserRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("해당 유저 없음 : " + userId));
+
+        // 해당 유저가 게임방에 참가하고 있지 않으면 throw.
+        GameRoom gameRoom = Optional.ofNullable(user.getGameRoom())
+                .orElseThrow(() -> new NoSuchElementException("해당 유저는 참가중인 게임방이 없음 : " + userId));
+
+        // 해당 게임방이 실제로 db에 있는지 확인.
+        gameRoomRepository.findById(gameRoom.getGameRoomId())
+                .orElseThrow(() -> new NoSuchElementException("해당 게임방은 없음"));
+
+        // 유저가 참가한 게임방을 없애기.
+        user.setGameRoom(null);
 
         return gameRoom;
     }
