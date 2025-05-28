@@ -1,12 +1,11 @@
 package PL_25.shuttleplay.Service;
 
-import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Game.*;
-import PL_25.shuttleplay.Repository.*;
-import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.NormalUser;
+import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
+import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -108,10 +107,22 @@ public class ManualMatchService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게임방을 찾을 수 없습니다."));
     }
 
+    // 수동 매칭을 하기 위해 요청한 사용자 ID가 방장인지 확인
+    private void validateRoomCreator(Long requesterId, GameRoom room) {
+        if (!room.getCreatedBy().getUserId().equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "방 생성자만 수동 매칭을 실행할 수 있습니다.");
+        }
+    }
     // 사전 수동 매칭 (구장)
-    public Game createManualGameFromRoom(GameRoom room, List<Long> userIds, LocalDate date, LocalTime time) {
+    public Game createManualGameFromRoom(GameRoom room, List<Long> userIds, LocalDate date, LocalTime time, Long requesterId) {
+
+        // 요청자가 방 생성자인지 검증
+        validateRoomCreator(requesterId, room);
+
+        // 유저 상태 검사 (게임 중이거나 다른 방 대기 중인지)
         validateUsersBeforeMatch(userIds, room);
 
+        // 매칭 큐에서 조건에 맞는 엔트리 필터링
         List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdInAndMatchedFalse(userIds)
                 .stream().filter(e -> e.getMatchType() == MatchQueueType.QUEUE_LIVE).toList();
 
@@ -119,12 +130,14 @@ public class ManualMatchService {
             throw new IllegalArgumentException("일부 사용자가 매칭 큐에 없거나 이미 매칭되었습니다.");
         }
 
+        // 매칭 상태 업데이트
         entries.forEach(e -> {
             e.setMatched(true);
             e.setIsPrematched(true);
         });
         matchQueueRepository.saveAll(entries);
 
+        // 새 게임 생성
         Game game = new Game();
         game.setDate(date != null ? date : LocalDate.now());
         game.setTime(time != null ? time : LocalTime.now());
@@ -132,14 +145,14 @@ public class ManualMatchService {
         Game savedGame = gameRepository.save(game);
 
         // 팀 구분을 위한 코드 수정 부분
-        List<GameParticipant> participants = entries.stream().map(entry -> {
-            GameParticipant participant = new GameParticipant();
-            participant.setGame(savedGame);
-            participant.setUser(entry.getUser());
-            return participant;
-        }).collect(Collectors.toList());
-
-        gameParticipantRepository.saveAll(participants);
+//        List<GameParticipant> participants = entries.stream().map(entry -> {
+//            GameParticipant participant = new GameParticipant();
+//            participant.setGame(savedGame);
+//            participant.setUser(entry.getUser());
+//            return participant;
+//        }).collect(Collectors.toList());
+//
+//        gameParticipantRepository.saveAll(participants);
 
         // GameHistory 저장은 게임 결과 입력 시 하는 것으로..
 
@@ -147,9 +160,14 @@ public class ManualMatchService {
     }
 
     // 현장 매칭 수동(구장)
-    public Game createLiveGameFromRoom(GameRoom room, List<Long> userIds) {
+    public Game createLiveGameFromRoom(GameRoom room, List<Long> userIds, Long requesterId) {
+        // 요청자가 방 생성자인지 검증
+        validateRoomCreator(requesterId, room);
+
+        // 유저 상태 검사 (게임 중이거나 다른 방 대기 중인지)
         validateUsersBeforeMatch(userIds, room);
 
+        // 매칭 큐에서 조건에 맞는 엔트리 필터링
         List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdInAndMatchedFalse(userIds)
                 .stream().filter(e -> e.getMatchType() == MatchQueueType.QUEUE_LIVE).toList();
 
@@ -157,12 +175,14 @@ public class ManualMatchService {
             throw new IllegalArgumentException("일부 사용자가 매칭 큐에 없거나 이미 매칭되었습니다.");
         }
 
+        // 매칭 상태 업데이트
         entries.forEach(e -> {
             e.setMatched(true);
             e.setIsPrematched(false);
         });
         matchQueueRepository.saveAll(entries);
 
+        // 새 게임 생성
         Game game = new Game();
         game.setDate(LocalDate.now());
         game.setTime(LocalTime.now());
@@ -170,14 +190,14 @@ public class ManualMatchService {
         Game savedGame = gameRepository.save(game);
 
         // 팀 구분을 위한 코드 수정 부분
-        List<GameParticipant> participants = entries.stream().map(entry -> {
-            GameParticipant participant = new GameParticipant();
-            participant.setGame(savedGame);
-            participant.setUser(entry.getUser());
-            return participant;
-        }).collect(Collectors.toList());
-
-        gameParticipantRepository.saveAll(participants);
+//        List<GameParticipant> participants = entries.stream().map(entry -> {
+//            GameParticipant participant = new GameParticipant();
+//            participant.setGame(savedGame);
+//            participant.setUser(entry.getUser());
+//            return participant;
+//        }).collect(Collectors.toList());
+//
+//        gameParticipantRepository.saveAll(participants);
 
         // GameHistory 저장은 게임 결과 입력 시 하는 것으로..
 

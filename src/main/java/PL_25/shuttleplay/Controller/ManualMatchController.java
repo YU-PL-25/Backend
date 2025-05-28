@@ -73,45 +73,61 @@ public class ManualMatchController {
         return ResponseEntity.ok(Map.of("message", "취소 완료", "status", 200));
     }
 
-    // 사전 수동 매칭 (구장 기준)
+    // 사전 수동 매칭 (구장 기준) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
     @PostMapping("/create/manual-game")
     public ResponseEntity<Map<String, Object>> createManualGame(@RequestParam Long roomId,
+                                                                @RequestParam Long requesterId,
                                                                 @RequestBody Map<String, Object> body) {
+        // 1. 게임방 조회
         GameRoom room = manualMatchService.getGameRoomById(roomId);
 
+        // 2. 요청 바디에서 사용자 ID 목록과 날짜/시간 추출
         List<Integer> userIds = (List<Integer>) body.get("userIds");
         String dateStr = (String) body.get("date");
         String timeStr = (String) body.get("time");
 
+        // 3. 문자열 → LocalDate/LocalTime 변환
         LocalDate date = (dateStr != null) ? LocalDate.parse(dateStr) : null;
         LocalTime time = (timeStr != null) ? LocalTime.parse(timeStr) : null;
 
-
+        // 4. 사용자 ID 정수형 리스트 → Long 타입 변환
         List<Long> longUserIds = userIds.stream().map(Integer::longValue).toList();
-        Game game = manualMatchService.createManualGameFromRoom(room, longUserIds, date, time);
 
+        // 5. 수동 매칭 실행 (요청자 ID를 통해 방장인지 검증)
+        Game game = manualMatchService.createManualGameFromRoom(room, longUserIds, date, time, requesterId);
+
+        // 6. 응답 반환 (managerId 포함)
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
                 "gameId", game.getGameId(),
                 "userIds", longUserIds,
+                "managerId", requesterId,
                 "location", game.getLocation(),
                 "date", game.getDate(),
                 "time", game.getTime()
         ));
     }
 
-    // 현장 수동 매칭(구장 기준)
+    // 현장 수동 매칭(구장 기준) - 게임방 내 큐에 등록된 사람들 중 manager 역할의 사용자 직접 매칭 수행
     @PostMapping("/create/live-game")
     public ResponseEntity<Map<String, Object>> createLiveGame(@RequestParam Long roomId,
+                                                              @RequestParam Long requesterId,
                                                               @RequestBody Map<String, List<Long>> body) {
+        // 1. 매칭 대상 유저 ID 목록 추출
         List<Long> userIds = body.get("userId");
-        GameRoom room = manualMatchService.getGameRoomById(roomId);
-        Game game = manualMatchService.createLiveGameFromRoom(room, userIds);
 
+        // 2. 게임방 조회
+        GameRoom room = manualMatchService.getGameRoomById(roomId);
+
+        // 3. 수동 매칭 실행 (requesterId를 통해 방장인지 검증)
+        Game game = manualMatchService.createLiveGameFromRoom(room, userIds, requesterId);
+
+        // 4. 응답 반환 (현재 시각 기준 경기 생성, managerId 포함)
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
                 "gameId", game.getGameId(),
                 "userIds", userIds,
+                "managerId", requesterId,
                 "location", game.getLocation(),
                 "date", game.getDate(),
                 "time", game.getTime()
@@ -140,8 +156,7 @@ public class ManualMatchController {
         ));
     }
 
-    // 사전 수동 매칭 (동네 기준)
-    // 방 목록에서 게임방 참가
+    // 사전 수동 매칭 (동네 기준) - 방 목록에서 게임방 참가
     @PostMapping("/join-room")
     public ResponseEntity<Map<String, Object>> joinRoom(@RequestParam Long userId, @RequestParam Long roomId) {
         GameRoom room = gameRoomRepository.findById(roomId)
@@ -208,6 +223,4 @@ public class ManualMatchController {
                 "time", room.getTime()
         ));
     }
-
-
 }
