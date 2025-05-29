@@ -30,7 +30,6 @@ public class AutoMatchService {
     private final GameRoomRepository gameRoomRepository;
     private final GameRepository gameRepository;
     private final NormalUserRepository normalUserRepository;
-    private final GameHistoryRepository gameHistoryRepository;
     private final GameParticipantRepository gameParticipantRepository;
 
     @PersistenceContext
@@ -202,14 +201,6 @@ public class AutoMatchService {
                 game.setParticipants(participants); // cascade로 저장되게 연결
 
                 Game savedGame = gameRepository.save(game); // Game과 참가자 함께 저장됨
-
-                // GameHistory 생성
-                GameHistory history = new GameHistory();
-                history.setGame(savedGame);
-                history.setScoreTeamA(0);
-                history.setScoreTeamB(0);
-                history.setCompleted(false);
-                gameHistoryRepository.save(history);
 
                 // 큐 상태 업데이트
                 matchedGroup.forEach(entry -> {
