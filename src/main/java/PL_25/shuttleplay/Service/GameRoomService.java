@@ -131,6 +131,7 @@ public class GameRoomService {
 
         // 유저가 참가한 게임방을 없애기.
         user.setGameRoom(null);
+        gameRoom.getParticipants().remove(user);
 
         return gameRoom;
     }
