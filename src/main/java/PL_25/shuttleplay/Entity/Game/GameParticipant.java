@@ -8,6 +8,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
+@Table(name = "GAME_PARTICIPANT")
 @IdClass(GameParticipantId.class)
 public class GameParticipant {
 
@@ -23,6 +24,14 @@ public class GameParticipant {
 
     @Enumerated(EnumType.STRING)
     private TeamType team;
+
+    public GameParticipant() {
+    }
+
+    public GameParticipant(NormalUser user, Game game) {
+        this.user = user;
+        this.game = game;
+    }
 
     public Long getUserId() {
         return user != null ? user.getUserId() : null;

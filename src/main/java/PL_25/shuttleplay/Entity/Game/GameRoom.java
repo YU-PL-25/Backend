@@ -42,6 +42,11 @@ public class GameRoom {
     private LocalDate date;
     private LocalTime time;
 
+    // 방 생성자 (방장, manager)
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private NormalUser createdBy;
+
 //    // 사용자의 프로필 정보를 입력받아, 해당 게임방에 있는 사람들과 경기를 매칭해줌
 //    public Game startMatching(Profile userProfile) {
 //        Game newGame = new Game();
