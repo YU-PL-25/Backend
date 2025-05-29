@@ -1,5 +1,6 @@
 package PL_25.shuttleplay.Service;
 
+import PL_25.shuttleplay.Repository.LocationRepository;
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -23,6 +25,7 @@ public class GameRoomService {
     private final LocationService locationService;
     private final GameRoomRepository gameRoomRepository;
     private final NormalUserRepository normalUserRepository;
+    private final LocationRepository locationRepository;
 
 
 
@@ -93,9 +96,11 @@ public class GameRoomService {
                 .build();
 
         // 4. 방장의 게임방 등록 및 role 지정
+        // 방장의 GameRoom과 참가자 설정.
         master.setGameRoom(gameRoom);
         master.setRole("manager"); // 방장 권한 부여
         normalUserRepository.save(master);
+        gameRoom.getParticipants().add(master);
 
         // 5. db에 게임방 저장
         return gameRoomRepository.save(gameRoom);
@@ -114,8 +119,9 @@ public class GameRoomService {
         NormalUser user = normalUserRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("요청한 유저 없음 : " + userId));
 
-        // 둘다 있으면 유저의 GameRoom 설정.
+        // 둘다 있으면 GameRoom과 participants 설정
         user.setGameRoom(gameRoom);
+        gameRoom.getParticipants().add(user);
 
         return gameRoom;
     }
@@ -139,7 +145,43 @@ public class GameRoomService {
 
         // 유저가 참가한 게임방을 없애기.
         user.setGameRoom(null);
+        gameRoom.getParticipants().remove(user);
 
         return gameRoom;
+    }
+
+
+    // 게임방 삭제.
+    @Transactional
+    public void deleteGameRoom(long gameRoomId) {
+
+        GameRoom gameRoom = gameRoomRepository.findById(gameRoomId)
+                .orElseThrow(() -> new NoSuchElementException("해당 게임방 없음"));
+
+        // GameRoom의 참조를 NormalUser가 가지고 있어서 null로 처리.
+        for (NormalUser n : gameRoom.getParticipants()) {
+            n.setGameRoom(null);
+        }
+
+        gameRoomRepository.delete(gameRoom);
+    }
+
+
+    // 게임방 전체 조회
+    @Transactional(readOnly = true)
+    public List<GameRoom> selectAllGameRoom() {
+
+        return gameRoomRepository.findAll();
+    }
+
+
+    // 같은 구장에 있는 게임방 조회
+    @Transactional(readOnly = true)
+    public List<GameRoom> selectGameRoomByLocation(long locationId) {
+
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new NoSuchElementException("해당 위치는 존재하지 않습니다 : " + locationId));
+
+        return gameRoomRepository.findByLocation(location);
     }
 }

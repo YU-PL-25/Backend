@@ -11,12 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
 @RequiredArgsConstructor
-public class GameRoomApiController {
+public class GameRoomController {
 
     private final GameRoomService gameRoomService;
 
@@ -98,7 +99,7 @@ public class GameRoomApiController {
 
     // 유저가 참가한 게임방 나가기.
     @DeleteMapping("/api/users/{userId}/game-room")
-    public ResponseEntity<Map<String, Object>> deleteGameRoom(
+    public ResponseEntity<Map<String, Object>> leaveGameRoom(
             @PathVariable("userId") long userId
     ) {
 
@@ -116,6 +117,81 @@ public class GameRoomApiController {
         } catch (NoSuchElementException e) {
             response.put("status", 400);
             response.put("error", "유저의 게임방 나가기가 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 게임방 삭제.
+    @DeleteMapping("/api/game-room/{gameRoomId}")
+    public ResponseEntity<Map<String, Object>> deleteGameRoom(
+            @PathVariable("gameRoomId") long gameRoomId
+    ) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            gameRoomService.deleteGameRoom(gameRoomId);
+
+            response.put("status", 200);
+            response.put("message", "게임방 삭제에 성공했습니다.");
+            response.put("gameRoomId", gameRoomId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (NoSuchElementException e) {
+
+            response.put("status", 400);
+            response.put("error", "게임방 삭제에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 게임방 전체 조회
+    @GetMapping("/api/game-room")
+    public ResponseEntity<Map<String, Object>> selectAllGameRoom() {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<GameRoom> gameRoomList = gameRoomService.selectAllGameRoom();
+            
+            response.put("status", 200);
+            response.put("message", "게임방 전체 조회에 성공했습니다.");
+            response.put("data", gameRoomList);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (NoSuchElementException e) {
+
+            response.put("status", 400);
+            response.put("error", "게임방 전체 조회에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 같은 구장에 있는 게임방 조회.
+    @GetMapping("/api/locations/{locationId}/game-room")
+    public ResponseEntity<Map<String, Object>> selectGameRoomByLocation(
+            @PathVariable("locationId") long locationId
+    ) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<GameRoom> gameRoomList = gameRoomService.selectGameRoomByLocation(locationId);
+
+            response.put("status", 200);
+            response.put("message", "구장 기준으로 게임방 조회에 성공했습니다.");
+            response.put("data", gameRoomList);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NoSuchElementException e) {
+
+            response.put("status", 400);
+            response.put("error", "구장 기준으로 게임방 조회에 실패했습니다.");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
