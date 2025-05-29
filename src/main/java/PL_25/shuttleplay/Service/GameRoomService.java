@@ -1,5 +1,6 @@
 package PL_25.shuttleplay.Service;
 
+import PL_25.shuttleplay.Repository.LocationRepository;
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
@@ -24,6 +25,7 @@ public class GameRoomService {
     private final LocationService locationService;
     private final GameRoomRepository gameRoomRepository;
     private final NormalUserRepository normalUserRepository;
+    private final LocationRepository locationRepository;
 
 
 
@@ -148,9 +150,21 @@ public class GameRoomService {
     }
 
 
+    // 게임방 전체 조회
     @Transactional(readOnly = true)
     public List<GameRoom> selectAllGameRoom() {
 
         return gameRoomRepository.findAll();
+    }
+
+
+    // 같은 구장에 있는 게임방 조회
+    @Transactional(readOnly = true)
+    public List<GameRoom> selectGameRoomByLocation(long locationId) {
+
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new NoSuchElementException("해당 위치는 존재하지 않습니다 : " + locationId));
+
+        return gameRoomRepository.findByLocation(location);
     }
 }

@@ -17,7 +17,7 @@ import java.util.NoSuchElementException;
 
 @RestController
 @RequiredArgsConstructor
-public class GameRoomApiController {
+public class GameRoomController {
 
     private final GameRoomService gameRoomService;
 
@@ -167,6 +167,31 @@ public class GameRoomApiController {
 
             response.put("status", 400);
             response.put("error", "게임방 전체 조회에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+
+    // 같은 구장에 있는 게임방 조회.
+    @GetMapping("/api/locations/{locationId}/game-room")
+    public ResponseEntity<Map<String, Object>> selectGameRoomByLocation(
+            @PathVariable("locationId") long locationId
+    ) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<GameRoom> gameRoomList = gameRoomService.selectGameRoomByLocation(locationId);
+
+            response.put("status", 200);
+            response.put("message", "구장 기준으로 게임방 조회에 성공했습니다.");
+            response.put("data", gameRoomList);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NoSuchElementException e) {
+
+            response.put("status", 400);
+            response.put("error", "구장 기준으로 게임방 조회에 실패했습니다.");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
