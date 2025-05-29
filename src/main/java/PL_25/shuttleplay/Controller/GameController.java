@@ -117,10 +117,11 @@ public class GameController {
         gameHistoryRepository.save(gameHistory);
         gameRepository.save(game);
 
-        // Game 방장이 경기 결과를 입력하면 해당 Game에 참가중인 참가자들에게 모두 MMR 점수 반영하도록 함
-        if (game.getParticipants().size() != 2) {
-            return ResponseEntity.badRequest().body("현재는 1:1 경기만 지원됩니다.");
-        }
+//        // Game 방장이 경기 결과를 입력하면 해당 Game에 참가중인 참가자들에게 모두 MMR 점수 반영하도록 함
+//        if (game.getParticipants().size() != 2) {
+//            return ResponseEntity.badRequest().body("현재는 1:1 경기만 지원됩니다.");
+//        }
+
         // MMR 점수 갱신 (단식)
         Long userA = game.getParticipants().get(0).getUserId();
         Long userB = game.getParticipants().get(1).getUserId();
