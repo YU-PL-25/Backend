@@ -12,6 +12,7 @@ import lombok.Setter;
 public class UserRegisterDTO {
     // NormalUser 객체에 담길 정보
     private String name;
+    private String loginId;
     private String password;
     private String nickname;
     private String gender;
