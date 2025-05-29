@@ -25,7 +25,6 @@ public class ManualMatchService {
 
     private final GameRoomRepository gameRoomRepository;
     private final GameRepository gameRepository;
-    private final GameHistoryRepository gameHistoryRepository;
     private final MatchQueueRepository matchQueueRepository;
     private final NormalUserRepository normalUserRepository;
     private final GameParticipantRepository gameParticipantRepository;
@@ -193,14 +192,6 @@ public class ManualMatchService {
 
         game.setParticipants(participants); // game → participants 관계 설정
         Game savedGame = gameRepository.save(game); // cascade로 GameParticipant까지 저장됨
-
-        // GameHistory 생성
-        GameHistory history = new GameHistory();
-        history.setGame(savedGame);
-        history.setScoreTeamA(0);
-        history.setScoreTeamB(0);
-        history.setCompleted(false);
-        gameHistoryRepository.save(history);
 
         // 매칭된 유저들의 currentGame 필드 업데이트
         List<NormalUser> users = entries.stream().map(MatchQueueEntry::getUser).toList();
