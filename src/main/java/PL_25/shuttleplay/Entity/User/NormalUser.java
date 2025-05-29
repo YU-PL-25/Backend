@@ -29,7 +29,7 @@ public class NormalUser extends User {
     @JoinColumn(name = "profile_id")
     private Profile profile;    // 개인 게임 정보를 담은 프로필 객체
 
-    @ManyToOne(cascade = CascadeType.PERSIST)
+    @ManyToOne
     @JoinColumn(name = "game_room_id")
     @JsonBackReference
     private GameRoom gameRoom; // 참여 게임방
