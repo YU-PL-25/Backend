@@ -76,9 +76,6 @@ public class GameController {
         return ResponseEntity.ok("팀 배정 완료!");
     }
 
-
-
-
     // 경기 종료 시 FINISHED 상태로 전환 (게임 종료하기, 스코어 입력하기)
     @PatchMapping("/{gameId}/complete")
     public ResponseEntity<String> completeGame(@PathVariable Long gameId) {
@@ -92,10 +89,16 @@ public class GameController {
     }
 
     // 경기 결과 입력 및 MMR 점수 갱신
+    // 경기 결과 입력 시 gameId는 입력하는 사용자가 참여중인 gameId를 자동으로 가져오도록 함
     @PostMapping("/result")
     public ResponseEntity<String> inputGameResult(@RequestBody GameHistoryDTO dto) {
-        Game game = gameRepository.findById(dto.getGameId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 gameId의 Game이 존재하지 않습니다 (2)"));
+        Long userId = dto.getUserId();  // 입력하는 사람
+        // 입력하는 사용자가 참여한 지금 게임 찾기
+        Game game = gameParticipantService.findFinishedGameByUser(userId)
+                .orElseThrow(() -> new IllegalArgumentException(("사용자가 FINISHED 상태의 게임에 참여하고 있지 않습니다.")));
+
+//        Game game = gameRepository.findById(dto.getGameId())
+//                .orElseThrow(() -> new IllegalArgumentException("해당 gameId의 Game이 존재하지 않습니다 (2)"));
 
         // 종료되지 않은 게임은 결과 입력 불가능
         if (game.getStatus() != GameStatus.FINISHED) {
