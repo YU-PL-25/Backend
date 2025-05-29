@@ -146,6 +146,11 @@ public class GameRoomService {
         GameRoom gameRoom = gameRoomRepository.findById(gameRoomId)
                 .orElseThrow(() -> new NoSuchElementException("해당 게임방 없음"));
 
+        // GameRoom의 참조를 NormalUser가 가지고 있어서 null로 처리.
+        for (NormalUser n : gameRoom.getParticipants()) {
+            n.setGameRoom(null);
+        }
+
         gameRoomRepository.delete(gameRoom);
     }
 
