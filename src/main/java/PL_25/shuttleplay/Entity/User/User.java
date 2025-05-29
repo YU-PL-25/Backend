@@ -14,5 +14,7 @@ public abstract class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
+    private String loginId;
     private String password;
+    private String salt;
 }
