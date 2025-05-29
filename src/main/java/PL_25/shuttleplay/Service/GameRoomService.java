@@ -84,8 +84,9 @@ public class GameRoomService {
                 .time(gameRoomDTO.getLocalTime())
                 .build();
 
-        // 방장의 GameRoom 설정.
+        // 방장의 GameRoom과 참가자 설정.
         master.setGameRoom(gameRoom);
+        gameRoom.getParticipants().add(master);
 
         // db에 저장하기.
         return gameRoomRepository.save(gameRoom);
@@ -104,8 +105,9 @@ public class GameRoomService {
         NormalUser user = normalUserRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("요청한 유저 없음 : " + userId));
 
-        // 둘다 있으면 유저의 GameRoom 설정.
+        // 둘다 있으면 GameRoom과 participants 설정
         user.setGameRoom(gameRoom);
+        gameRoom.getParticipants().add(user);
 
         return gameRoom;
     }
