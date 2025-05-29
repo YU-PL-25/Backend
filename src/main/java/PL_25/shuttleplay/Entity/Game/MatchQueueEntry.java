@@ -51,6 +51,9 @@ public class MatchQueueEntry{
     @Enumerated(EnumType.STRING)
     private MatchQueueType matchType;
 
+    // 자동 게임방 매칭 인원
+    private int requiredMatchCount;
+
     public Long getUserId() {
         return user != null ? user.getUserId() : null;
     }

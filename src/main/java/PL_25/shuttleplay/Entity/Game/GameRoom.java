@@ -24,7 +24,7 @@ public class GameRoom {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long gameRoomId;
 
-    @OneToMany(mappedBy = "gameRoom", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "gameRoom")
     @JsonManagedReference
     private List<NormalUser> participants;
 

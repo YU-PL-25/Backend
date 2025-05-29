@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalDouble;
 
 public interface GameParticipantRepository extends JpaRepository<GameParticipant, GameParticipantId> {
     Optional<GameParticipant> findById(GameParticipantId id);
@@ -14,4 +13,5 @@ public interface GameParticipantRepository extends JpaRepository<GameParticipant
     List<GameParticipant> findByGameAndTeam(Game game, TeamType team);
     Optional<GameParticipant> findByGame_GameIdAndUser_UserId(Long gameId, Long userId);
     boolean existsByUser_UserIdAndGame_Status(Long userId, GameStatus status);
+    List<GameParticipant> findAllByGame_GameId(Long gameId);
 }

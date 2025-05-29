@@ -32,6 +32,9 @@ public class AutoMatchRequest {
     // mmr 정보
     private MMRDTO mmr;
 
+   // 원하는 게임방 매칭 총 인원 수 (본인 포함)
+    private int requiredMatchCount;
+
     public boolean isPreMatch(){
         return date != null && time != null;
     }

@@ -8,6 +8,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
+@Table(name = "GAME_PARTICIPANT")
 @IdClass(GameParticipantId.class)
 public class GameParticipant {
 
