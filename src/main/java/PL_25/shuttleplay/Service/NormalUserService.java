@@ -10,6 +10,10 @@ import PL_25.shuttleplay.dto.UserRegisterDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import static PL_25.shuttleplay.Util.SHA256PasswordEncoderUtil.sha256WithSaltEncode;
+import static PL_25.shuttleplay.Util.SHA256PasswordEncoderUtil.getSalt;
+
+
 @Service
 @RequiredArgsConstructor
 public class NormalUserService {
@@ -20,11 +24,19 @@ public class NormalUserService {
     // 사용자 회원가입(등록)
     // 급수에 따른 MMR 초기화도 이때 진행
     public NormalUser createUser(UserRegisterDTO dto) {
+
+        String salt = getSalt();
+        String encodedPassword = sha256WithSaltEncode(dto.getPassword(), salt);
+
         NormalUser user = new NormalUser();
         user.setName(dto.getName());
         user.setNickname(dto.getNickname());
         user.setGender(dto.getGender());
-        user.setPassword(dto.getPassword());
+
+        user.setLoginId(dto.getLoginId()); // 아이디 설정
+        user.setPassword(encodedPassword); // 암호화된 패스워드 설정
+        user.setSalt(salt); // 로그인 하기위해 salt 설정.
+
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
         user.setRole(dto.getRole());
