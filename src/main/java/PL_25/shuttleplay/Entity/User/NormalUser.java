@@ -45,4 +45,5 @@ public class NormalUser extends User {
     public boolean isInGame(){
         return currentGame != null;
     }
+
 }

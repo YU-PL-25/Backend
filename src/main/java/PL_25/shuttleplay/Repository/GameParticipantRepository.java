@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface GameParticipantRepository extends JpaRepository<GameParticipant, GameParticipantId> {
     Optional<GameParticipant> findById(GameParticipantId id);
+    List<GameParticipant> findByGame(Game game);
     Optional<GameParticipant> findByGameAndUser(Game game, NormalUser user);
     List<GameParticipant> findByGameAndTeam(Game game, TeamType team);
     Optional<GameParticipant> findByGame_GameIdAndUser_UserId(Long gameId, Long userId);
