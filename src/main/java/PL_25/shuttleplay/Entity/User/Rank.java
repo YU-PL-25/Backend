@@ -5,10 +5,13 @@ package PL_25.shuttleplay.Entity.User;
 * */
 
 public enum Rank {
+    SS("ss", 1900),
     S("s", 1600),
     A("a", 1300),
     B("b", 1000),
-    C("c", 700);
+    C("c", 700),
+    D("d", 400),
+    E("e", 100);
 
     private final String label;
     private final int initialMmr;
