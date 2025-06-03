@@ -2,11 +2,13 @@ package PL_25.shuttleplay.Controller;
 
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameHistory;
+import PL_25.shuttleplay.Entity.Game.GameParticipant;
 import PL_25.shuttleplay.Entity.Game.GameStatus;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;
 import PL_25.shuttleplay.Repository.GameParticipantRepository;
 import PL_25.shuttleplay.Repository.GameRepository;
+import PL_25.shuttleplay.Repository.NormalUserRepository;
 import PL_25.shuttleplay.Service.GameParticipantService;
 import PL_25.shuttleplay.Service.MMRService;
 import PL_25.shuttleplay.Service.NormalUserService;
@@ -30,6 +32,7 @@ import java.util.List;
 public class GameController {
     private final NormalUserService normalUserService;
     private final GameHistoryRepository gameHistoryRepository;
+    private final NormalUserRepository normalUserRepository;
     private final GameRepository gameRepository;
     private final MMRService mmrService;
     private final GameParticipantService gameParticipantService;
@@ -135,6 +138,18 @@ public class GameController {
 
         normalUserService.updateMmr(userA, userB, gameHistory);
         normalUserService.updateMmr(userB, userA, gameHistory);
+
+        // 게임 히스토리 입력 후 participants 에게 할당되어있는 gameId null 처리 (참여중인 게임 해제)
+        // 결과 반영 후 참가자들의 game 연결 해제
+        List<GameParticipant> participants = gameParticipantService.findByGame(game);
+        for (GameParticipant participant : participants) {
+            Long userId1 = participant.getUser().getUserId();
+            NormalUser user1 = normalUserRepository.findById(userId1)
+                    .orElseThrow(() -> new IllegalArgumentException("not exist user"));
+            user1.setCurrentGame(null);
+            normalUserRepository.save(user1);
+        }
+        gameParticipantService.saveAll(participants);
 
         return ResponseEntity.ok("경기 결과가 정상 반영되었습니다.");
     }

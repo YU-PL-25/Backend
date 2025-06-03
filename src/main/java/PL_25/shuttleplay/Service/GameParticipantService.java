@@ -11,6 +11,7 @@ import PL_25.shuttleplay.Repository.NormalUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -20,6 +21,14 @@ public class GameParticipantService {
     private final GameParticipantRepository gameParticipantRepository;
     private final GameRepository gameRepository;
     private final NormalUserRepository normalUserRepository;
+
+    public List<GameParticipant> findByGame(Game game) {
+        return gameParticipantRepository.findByGame(game);
+    }
+
+    public void saveAll(List<GameParticipant> participants) {
+        gameParticipantRepository.saveAll(participants);
+    }
 
     // 팀 구분
     public void assignTeam(Long gameId, Long userId, TeamType teamType) {
@@ -43,5 +52,4 @@ public class GameParticipantService {
                 .filter(game -> game.getStatus() == GameStatus.FINISHED)
                 .findFirst();
     }
-
 }
