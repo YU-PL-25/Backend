@@ -4,8 +4,8 @@ import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Service.LoginService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,18 +33,23 @@ public class LoginController {
 
         Map<String, Object> response = new HashMap<>();
 
-        System.out.println("받기 성공");
         try {
 
+            // 해당 유저가 유효한 유저인지 확인.
             NormalUser loginUser = loginService.checkIsValidUser(id, password);
-            if (loginUser != null) {
-                httpSession.setAttribute("loginUser", loginUser.getUserId());
-                System.out.println("로그인 성공!!");
-            }
-            // 세션 추가 코드...
-            return null;
+
+            // 해당 유저 pk로 session 설정, 세션 관련 설정은 CustomSessionListener 참고.
+            httpSession.setAttribute("loginUser", loginUser.getUserId());
+
+            response.put("status", 200);
+            response.put("message", "로그인에 성공했습니다.");
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+
         } catch (Exception e) {
-            return null;
+
+            response.put("status", 400);
+            response.put("error", "로그인에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
 
