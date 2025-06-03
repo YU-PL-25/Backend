@@ -56,10 +56,23 @@ public class LoginController {
 
     // 로그아웃 요청
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logout() {
+    public ResponseEntity<Map<String, Object>> processLogout(HttpSession httpSession) {
 
+        Map<String, Object> response = new HashMap<>();
 
+        Long loginUser = (Long) httpSession.getAttribute("loginUser");
 
-        return null;
+        if (loginUser != null) {
+            httpSession.invalidate(); // 세션 무효화.
+            response.put("status", 200);
+            response.put("message", "로그아웃 성공");
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+
+        }
+        else {
+            response.put("status", 400);
+            response.put("error", "로그인 세션이 존재하지 않습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
     }
 }
