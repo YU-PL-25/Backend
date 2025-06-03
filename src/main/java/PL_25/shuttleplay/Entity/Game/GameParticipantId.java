@@ -9,11 +9,17 @@ public class GameParticipantId implements Serializable {
 
     public GameParticipantId() {}
 
-    public GameParticipantId(Long game, Long user) {
-        this.game = game;
-        this.user = user;
+    public GameParticipantId(Long gameId, Long userId) {
+        this.game = gameId;
+        this.user = userId;
+    }
+    public Long getGame() {
+        return game;
     }
 
+    public Long getUser() {
+        return user;
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

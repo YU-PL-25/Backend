@@ -2,11 +2,13 @@ package PL_25.shuttleplay.Controller;
 
 import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameHistory;
+import PL_25.shuttleplay.Entity.Game.GameParticipant;
 import PL_25.shuttleplay.Entity.Game.GameStatus;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;
 import PL_25.shuttleplay.Repository.GameParticipantRepository;
 import PL_25.shuttleplay.Repository.GameRepository;
+import PL_25.shuttleplay.Repository.NormalUserRepository;
 import PL_25.shuttleplay.Service.GameParticipantService;
 import PL_25.shuttleplay.Service.MMRService;
 import PL_25.shuttleplay.Service.NormalUserService;
@@ -30,6 +32,7 @@ import java.util.List;
 public class GameController {
     private final NormalUserService normalUserService;
     private final GameHistoryRepository gameHistoryRepository;
+    private final NormalUserRepository normalUserRepository;
     private final GameRepository gameRepository;
     private final MMRService mmrService;
     private final GameParticipantService gameParticipantService;
@@ -76,9 +79,6 @@ public class GameController {
         return ResponseEntity.ok("팀 배정 완료!");
     }
 
-
-
-
     // 경기 종료 시 FINISHED 상태로 전환 (게임 종료하기, 스코어 입력하기)
     @PatchMapping("/{gameId}/complete")
     public ResponseEntity<String> completeGame(@PathVariable Long gameId) {
@@ -92,10 +92,16 @@ public class GameController {
     }
 
     // 경기 결과 입력 및 MMR 점수 갱신
+    // 경기 결과 입력 시 gameId는 입력하는 사용자가 참여중인 gameId를 자동으로 가져오도록 함
     @PostMapping("/result")
     public ResponseEntity<String> inputGameResult(@RequestBody GameHistoryDTO dto) {
-        Game game = gameRepository.findById(dto.getGameId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 gameId의 Game이 존재하지 않습니다 (2)"));
+        Long userId = dto.getUserId();  // 입력하는 사람
+        // 입력하는 사용자가 참여한 지금 게임 찾기
+        Game game = gameParticipantService.findFinishedGameByUser(userId)
+                .orElseThrow(() -> new IllegalArgumentException(("사용자가 FINISHED 상태의 게임에 참여하고 있지 않습니다.")));
+
+//        Game game = gameRepository.findById(dto.getGameId())
+//                .orElseThrow(() -> new IllegalArgumentException("해당 gameId의 Game이 존재하지 않습니다 (2)"));
 
         // 종료되지 않은 게임은 결과 입력 불가능
         if (game.getStatus() != GameStatus.FINISHED) {
@@ -117,10 +123,11 @@ public class GameController {
         gameHistoryRepository.save(gameHistory);
         gameRepository.save(game);
 
-        // Game 방장이 경기 결과를 입력하면 해당 Game에 참가중인 참가자들에게 모두 MMR 점수 반영하도록 함
-        if (game.getParticipants().size() != 2) {
-            return ResponseEntity.badRequest().body("현재는 1:1 경기만 지원됩니다.");
-        }
+//        // Game 방장이 경기 결과를 입력하면 해당 Game에 참가중인 참가자들에게 모두 MMR 점수 반영하도록 함
+//        if (game.getParticipants().size() != 2) {
+//            return ResponseEntity.badRequest().body("현재는 1:1 경기만 지원됩니다.");
+//        }
+
         // MMR 점수 갱신 (단식)
         Long userA = game.getParticipants().get(0).getUserId();
         Long userB = game.getParticipants().get(1).getUserId();
@@ -131,6 +138,18 @@ public class GameController {
 
         normalUserService.updateMmr(userA, userB, gameHistory);
         normalUserService.updateMmr(userB, userA, gameHistory);
+
+        // 게임 히스토리 입력 후 participants 에게 할당되어있는 gameId null 처리 (참여중인 게임 해제)
+        // 결과 반영 후 참가자들의 game 연결 해제
+        List<GameParticipant> participants = gameParticipantService.findByGame(game);
+        for (GameParticipant participant : participants) {
+            Long userId1 = participant.getUser().getUserId();
+            NormalUser user1 = normalUserRepository.findById(userId1)
+                    .orElseThrow(() -> new IllegalArgumentException("not exist user"));
+            user1.setCurrentGame(null);
+            normalUserRepository.save(user1);
+        }
+        gameParticipantService.saveAll(participants);
 
         return ResponseEntity.ok("경기 결과가 정상 반영되었습니다.");
     }
