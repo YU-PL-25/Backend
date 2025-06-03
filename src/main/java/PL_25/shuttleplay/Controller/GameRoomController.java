@@ -24,7 +24,7 @@ public class GameRoomController {
 
     // 게임방 생성 요청.
     /*
-        방 생성 성공 => CREATED(201) 반환.
+        방 생성 성공 => OK(200) 반환.
         방 생성 실패 => BAD_REQUEST(400) 반환.
     */
 
@@ -40,7 +40,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "현장 매칭(구장) 게임방이 성공적으로 생성되었습니다.");
             response.put("gameRoomId", gameRoom.getGameRoomId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } else {
             response.put("status", 400);
             response.put("error", "현장 매칭(구장) 게임방 생성에 실패했습니다.");
@@ -63,7 +63,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "사전 매칭(구장) 게임방이 성공적으로 생성되었습니다.");
             response.put("gameRoomId", gameRoom.getGameRoomId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } else {
             response.put("status", 400);
             response.put("error", "사전 매칭(구장) 게임방 생성에 실패했습니다.");
@@ -87,7 +87,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "유저의 게임방 참가 요청이 성공했습니다.");
             response.put("gameRoomId", gameRoom.getGameRoomId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
 
         } catch (NoSuchElementException e) {
             response.put("status", 400);
@@ -112,7 +112,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "유저의 게임방 나가기가 성공했습니다.");
             response.put("gameRoomId", gameRoom.getGameRoomId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
 
         } catch (NoSuchElementException e) {
             response.put("status", 400);
@@ -137,7 +137,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "게임방 삭제에 성공했습니다.");
             response.put("gameRoomId", gameRoomId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
 
         } catch (NoSuchElementException e) {
 
@@ -161,7 +161,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "게임방 전체 조회에 성공했습니다.");
             response.put("data", gameRoomList);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
 
         } catch (NoSuchElementException e) {
 
@@ -187,7 +187,7 @@ public class GameRoomController {
             response.put("status", 200);
             response.put("message", "구장 기준으로 게임방 조회에 성공했습니다.");
             response.put("data", gameRoomList);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (NoSuchElementException e) {
 
             response.put("status", 400);
