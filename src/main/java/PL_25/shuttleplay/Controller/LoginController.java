@@ -28,7 +28,7 @@ public class LoginController {
             @RequestBody Map<String, Object> loginDto,
             HttpSession httpSession
     ) {
-        String id = (String) loginDto.get("id");
+        String email = (String) loginDto.get("email");
         String password = (String) loginDto.get("password");
 
         Map<String, Object> response = new HashMap<>();
@@ -36,7 +36,7 @@ public class LoginController {
         try {
 
             // 해당 유저가 유효한 유저인지 확인.
-            NormalUser loginUser = loginService.checkIsValidUser(id, password);
+            NormalUser loginUser = loginService.checkIsValidUser(email, password);
 
             // 해당 유저 pk로 session 설정, 세션 관련 설정은 CustomSessionListener 참고.
             httpSession.setAttribute("loginUser", loginUser.getUserId());
@@ -45,11 +45,14 @@ public class LoginController {
             response.put("message", "로그인에 성공했습니다.");
             return ResponseEntity.status(HttpStatus.OK).body(response);
 
+        } catch (IllegalArgumentException e) {
+            response.put("status", 401);
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         } catch (Exception e) {
-
-            response.put("status", 400);
-            response.put("error", "로그인에 실패했습니다.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            response.put("status", 500);
+            response.put("error", "서버 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
