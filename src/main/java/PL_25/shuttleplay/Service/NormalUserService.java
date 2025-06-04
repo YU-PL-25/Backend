@@ -27,6 +27,7 @@ public class NormalUserService {
 
         String salt = getSalt();
         String encodedPassword = sha256WithSaltEncode(dto.getPassword(), salt);
+        dto.setRole("normal");
 
         NormalUser user = new NormalUser();
         user.setName(dto.getName());
@@ -39,7 +40,7 @@ public class NormalUserService {
 
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
-        user.setRole(dto.getRole());
+        user.setRole(dto.getRole()); // 일반 사용자 설정
 
         Rank rank = Rank.fromString(dto.getRankStr());
         user.setRank(rank);
