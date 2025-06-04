@@ -6,6 +6,7 @@ import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;
 import PL_25.shuttleplay.Service.NormalUserService;
 import PL_25.shuttleplay.dto.UserRegisterDTO;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,16 @@ public class NormalUserController {
     @PostMapping("/register")
     public NormalUser registerUser(@RequestBody UserRegisterDTO registerDTO) {
         return normalUserService.createUser(registerDTO);
+    }
+
+    // 사용자 개인정보 조회
+    @GetMapping("/myinfo")
+    public NormalUser getMyInfo(HttpSession session) {
+        Long userId = (Long) session.getAttribute("loginUser");
+        if (userId == null) {
+            throw new RuntimeException("로그인 세션이 존재하지 않습니다.");
+        }
+        return normalUserService.findUserById(userId);
     }
 
     @GetMapping("/{userId}/game-history")
