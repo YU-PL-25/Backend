@@ -8,7 +8,7 @@ import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Entity.User.Profile;
 import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
-import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
+import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -53,19 +53,19 @@ public class AutoMatchService {
     }
 
     // 사전 매칭 큐 등록용 (게임방 매칭)
-    public MatchQueueResponse registerToQueue(Long userId, ManualMatchRequest request) {
+    public MatchQueueResponse registerToQueue(Long userId, AutoMatchRequest request) {
         return registerToQueue(userId, null, request, true); // 내부 통합 메서드로 위임 (isPreMatch = true)
     }
 
     // 현장 매칭 큐 등록용 (게임 매칭)
-    public MatchQueueResponse registerToQueue(Long userId, Long gameRoomId, ManualMatchRequest request) {
+    public MatchQueueResponse registerToQueue(Long userId, Long gameRoomId, AutoMatchRequest request) {
         return registerToQueue(userId, gameRoomId, request, false); // 내부 통합 메서드로 위임 (isPreMatch = false)
     }
 
     // 매칭 큐 등록 내부 통합 처리 메서드
     // - gameRoomId는 현장 게임 매칭 시에만 사용됨
     // - isPreMatch가 true면 사전 매칭, false면 현장 매칭
-    private MatchQueueResponse registerToQueue(Long userId, Long gameRoomId, ManualMatchRequest request, boolean isPreMatch) {
+    private MatchQueueResponse registerToQueue(Long userId, Long gameRoomId, AutoMatchRequest request, boolean isPreMatch) {
         NormalUser user = normalUserRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"));
 
@@ -103,9 +103,9 @@ public class AutoMatchService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DB에 MMR 정보가 없습니다.");
         }
         entry.setMmr(mmr);
-
         entry.setIsPrematched(isPreMatch);
         entry.setMatched(false);
+        entry.setRequiredMatchCount(request.getRequiredMatchCount());
 
         if (isPreMatch) {
             // 사전 매칭용 설정
@@ -165,6 +165,11 @@ public class AutoMatchService {
         validateUsersBeforeMatch(userIds, room);
 
         for (MatchQueueEntry me : queue) {
+            // 사용자 요청에 따른 인원 수 반영
+            int required = me.getRequiredMatchCount() > 0
+                    ? me.getRequiredMatchCount() - 1
+                    : getRequiredMatchCount(me.getProfile().getGameType());
+
             List<MatchQueueEntry> candidates = queue.stream()
                     .filter(other -> !other.equals(me))
                     .filter(other -> isSimilarEnough(me, other))
@@ -172,10 +177,10 @@ public class AutoMatchService {
                             calculateSimilarity(b, me),
                             calculateSimilarity(a, me)
                     ))
-                    .limit(getRequiredMatchCount(me.getProfile().getGameType()))
+                    .limit(required)
                     .toList();
 
-            if (candidates.size() == getRequiredMatchCount(me.getProfile().getGameType())) {
+            if (candidates.size() == required) {
                 List<MatchQueueEntry> matchedGroup = new ArrayList<>(candidates);
                 matchedGroup.add(me);
 
@@ -220,6 +225,7 @@ public class AutoMatchService {
 
         return null;
     }
+
 
     // 사전 매칭 (동네 기준) - 큐에 등록된 정보만으로 자동 매칭 및 게임방 생성
     public GameRoom createPreLocationMeetingRoomFromUser(Long userId) {

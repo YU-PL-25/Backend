@@ -19,6 +19,7 @@ public class MatchQueueResponse {
     private LocalTime time;
     private boolean isPrematched;
     private Long gameRoomId;
+    private int matchedUserCount; // 게임방이 연결되어 있다면 참여자 수를 넣음
 
     public MatchQueueResponse(MatchQueueEntry entry) {
         this.userId = entry.getUser().getUserId();
@@ -28,5 +29,8 @@ public class MatchQueueResponse {
         this.time = entry.getTime();
         this.isPrematched = Boolean.TRUE.equals(entry.getIsPrematched());
         this.gameRoomId = entry.getGameRoom() != null ? entry.getGameRoom().getGameRoomId() : null;
+        this.matchedUserCount = (entry.getGameRoom() != null && entry.getGameRoom().getParticipants() != null)
+                ? entry.getGameRoom().getParticipants().size()
+                : 1; // 자기 자신만 있을 경우 (대기 상태)
     }
 }
