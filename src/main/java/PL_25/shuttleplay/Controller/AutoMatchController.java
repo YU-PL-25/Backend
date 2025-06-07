@@ -7,6 +7,7 @@ import PL_25.shuttleplay.Entity.Game.MatchQueueResponse;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Service.AutoMatchService;
 import PL_25.shuttleplay.Service.MessageService;
+import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
 import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +38,7 @@ public class AutoMatchController {
     @PostMapping("/queue/gym")
     public ResponseEntity<Map<String, Object>> registerGymQueue(@RequestParam Long userId,
                                                                  @RequestParam Long roomId,
-                                                                 @RequestBody ManualMatchRequest request) {
+                                                                 @RequestBody AutoMatchRequest request) {
         MatchQueueResponse response = autoMatchService.registerToQueue(userId, roomId, request); // isPreMatch = false 내부 처리
 
         Map<String, Object> result = new HashMap<>();
@@ -45,13 +46,14 @@ public class AutoMatchController {
         result.put("isPrematched", response.isPrematched());
         result.put("userId", response.getUserId());
         result.put("gameRoomId", response.getGameRoomId());
+        result.put("matchedUserCount", response.getMatchedUserCount());
         return ResponseEntity.ok(result);
     }
 
     // 사전 동네 또는 사전 구장 매칭 큐 등록 (게임방 생성)(직접 위치/날짜/시간 입력)
     @PostMapping("/queue/location-preGym")
     public ResponseEntity<Map<String, Object>> registerLocationQueue(@RequestParam Long userId,
-                                                                      @RequestBody ManualMatchRequest request) {
+                                                                      @RequestBody AutoMatchRequest request) {
         MatchQueueResponse response = autoMatchService.registerToQueue(userId, request); // isPreMatch = true 내부 처리
 
         Map<String, Object> result = new HashMap<>();
