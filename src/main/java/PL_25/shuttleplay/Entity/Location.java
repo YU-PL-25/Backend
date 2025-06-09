@@ -35,5 +35,6 @@ public class Location {
         this.courtName = courtName;
         this.courtAddress = courtAddress;
     }
+
 }
 
