@@ -191,7 +191,9 @@ public class AutoMatchService {
                 Game game = new Game();
                 game.setDate(room.getDate());
                 game.setTime(room.getTime());
-                game.setLocation(room.getLocation());
+                game.setLocation(room.getLocation());game.setGameRoom(room);
+                game.setMatchType(String.valueOf(MatchQueueType.QUEUE_LIVE_AUTO));
+                game.setStatus(GameStatus.WAITING);
 
                 // 참가자 리스트 구성 및 게임과 양방향 연결
                 List<GameParticipant> participants = new ArrayList<>();
