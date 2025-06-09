@@ -1,8 +1,10 @@
 package PL_25.shuttleplay.Controller;
 
+import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Service.GameRoomService;
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.GameRoomJoinDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import lombok.RequiredArgsConstructor;
@@ -197,4 +199,20 @@ public class GameRoomController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
+
+
+    // 하나의 GameRoom에서 생성된 Game 리스트 조회
+    @GetMapping("/api/game-room/{gameRoomId}/game-list")
+    public ResponseEntity<Map<String, Object>> getGamesInGameRoom(@PathVariable Long gameRoomId) {
+        // DTO 형태로 반환
+        GameRoomDTO dto = gameRoomService.getGamesByGameRoomId(gameRoomId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 200);
+        response.put("message", "게임방 및 게임 리스트 조회 성공");
+        response.put("data", dto);
+
+        return ResponseEntity.ok(response);
+    }
+
 }

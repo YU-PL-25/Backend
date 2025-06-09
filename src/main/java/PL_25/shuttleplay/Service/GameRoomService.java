@@ -1,7 +1,10 @@
 package PL_25.shuttleplay.Service;
 
+import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Repository.LocationRepository;
+import PL_25.shuttleplay.dto.GameDTO;
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Entity.Location;
@@ -185,4 +188,34 @@ public class GameRoomService {
 
         return gameRoomRepository.findByLocation(location);
     }
+
+
+    // 하나의 GameRoom에 속해있는 Game들을 조회
+    // GameRoomDTO - 해당 gameRoomId를 가진 GameRoom에 대한 정보 제공
+    // GameDTO - 해당 gameRoomId에 속해있는 Game들에 대한 정보 제공
+    @Transactional(readOnly = true)
+    public GameRoomDTO getGamesByGameRoomId(Long gameRoomId) {
+        GameRoom gameRoom = gameRoomRepository.findById(gameRoomId)
+                .orElseThrow(() -> new NoSuchElementException("게임방이 존재하지 않습니다."));
+
+        List<GameDTO> gameDTOList = gameRoom.getGameList().stream()
+                .map(game -> GameDTO.builder()
+                        .gameId(game.getGameId())
+                        .status(game.getStatus().name())
+                        .matchType(game.getMatchType())
+                        .date(game.getDate().toString())
+                        .time(game.getTime().toString())
+                        .build())
+                .toList();
+
+        return GameRoomDTO.builder()
+                .gameRoomId(gameRoom.getGameRoomId())
+                .managerId(gameRoom.getCreatedBy().getUserId())
+                .title(gameRoom.getTitle())
+                .locationName(gameRoom.getLocation().getCourtName())
+                .locationAddress(gameRoom.getLocation().getCourtAddress())
+                .games(gameDTOList)
+                .build();
+    }
+
 }
