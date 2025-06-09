@@ -43,6 +43,7 @@ public class LoginController {
 
             response.put("status", 200);
             response.put("message", "로그인에 성공했습니다.");
+            response.put("userId", loginUser.getUserId());
             return ResponseEntity.status(HttpStatus.OK).body(response);
 
         } catch (IllegalArgumentException e) {
