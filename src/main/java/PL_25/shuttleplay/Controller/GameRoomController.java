@@ -197,4 +197,27 @@ public class GameRoomController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
+
+
+    // 게임방id로 상세정보 조회하기
+    @GetMapping("/api/game-room/{gameRoomId}")
+    public ResponseEntity<Map<String, Object>> selectGameRoom(
+            @PathVariable("gameRoomId") Long gameRoomId
+    ) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            GameRoom gameRoom = gameRoomService.selectGameRoomById(gameRoomId);
+            response.put("status", 200);
+            response.put("message", "게임방 id : " + gameRoomId + ", 기준으로 조회에 성공했습니다.");
+            response.put("data", gameRoom);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            response.put("status", 400);
+            response.put("message", "게임방 id : " + gameRoomId + ", 기준으로 조회에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
 }
