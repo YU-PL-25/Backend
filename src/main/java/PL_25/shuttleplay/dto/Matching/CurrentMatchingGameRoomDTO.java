@@ -12,5 +12,6 @@ public class CurrentMatchingGameRoomDTO {
 
     private Long masterId;
     private Location location;
+    private String title;       // 게임방 제목
 
 }
