@@ -177,6 +177,9 @@ public class ManualMatchService {
         game.setDate(LocalDate.now());
         game.setTime(LocalTime.now());
         game.setLocation(room.getLocation());
+        game.setGameRoom(room);
+        game.setMatchType(String.valueOf(MatchQueueType.QUEUE_LIVE_MANUAL));
+        game.setStatus(GameStatus.WAITING);
 
         // 참가자 저장 (중복 여부 검사하여 추가)
         List<GameParticipant> participants = new ArrayList<>();
