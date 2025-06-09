@@ -1,11 +1,7 @@
 package PL_25.shuttleplay.Service;
 
-import PL_25.shuttleplay.dto.GameDTO;
-import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
-import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
-import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
+import PL_25.shuttleplay.dto.Matching.*;
 
-import PL_25.shuttleplay.Entity.Game.Game;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
 import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.Game.MatchQueueEntry;
@@ -17,10 +13,8 @@ import PL_25.shuttleplay.Repository.LocationRepository;
 import PL_25.shuttleplay.Repository.MatchQueueRepository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -228,14 +222,28 @@ public class GameRoomService {
                 .orElseThrow(() -> new NoSuchElementException("게임방이 존재하지 않습니다."));
 
         List<GameDTO> gameDTOList = gameRoom.getGameList().stream()
-                .map(game -> GameDTO.builder()
-                        .gameId(game.getGameId())
-                        .status(game.getStatus().name())
-                        .matchType(game.getMatchType())
-                        .date(game.getDate().toString())
-                        .time(game.getTime().toString())
-                        .build())
-                .toList();
+                .map(game -> {
+                    List<PlayerDTO> players = game.getParticipants().stream()
+                            .map(p -> {
+                                var user = p.getUser();
+                                return PlayerDTO.builder()
+                                        .userId(user.getUserId())
+                                        .nickname(user.getNickname())
+                                        .rank(user.getRank().name())
+                                        .build();
+                            })
+                            .toList();
+
+                    return GameDTO.builder()
+                            .gameId(game.getGameId())
+                            .status(game.getStatus().name())
+                            .matchType(game.getMatchType())
+                            .date(game.getDate().toString())
+                            .time(game.getTime().toString())
+                            .players(players)
+                            .build();
+                }).toList();
+
 
         return GameRoomDTO.builder()
                 .gameRoomId(gameRoom.getGameRoomId())

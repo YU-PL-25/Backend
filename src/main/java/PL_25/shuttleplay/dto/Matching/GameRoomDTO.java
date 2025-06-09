@@ -1,6 +1,5 @@
 package PL_25.shuttleplay.dto.Matching;
 
-import PL_25.shuttleplay.dto.GameDTO;
 import lombok.Builder;
 import lombok.Getter;
 
