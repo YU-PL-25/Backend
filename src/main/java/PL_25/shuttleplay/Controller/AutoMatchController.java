@@ -1,10 +1,8 @@
 package PL_25.shuttleplay.Controller;
 
-import PL_25.shuttleplay.Entity.Game.Game;
-import PL_25.shuttleplay.Entity.Game.GameParticipant;
-import PL_25.shuttleplay.Entity.Game.GameRoom;
-import PL_25.shuttleplay.Entity.Game.MatchQueueResponse;
+import PL_25.shuttleplay.Entity.Game.*;
 import PL_25.shuttleplay.Entity.User.NormalUser;
+import PL_25.shuttleplay.Repository.MatchQueueRepository;
 import PL_25.shuttleplay.Service.AutoMatchService;
 import PL_25.shuttleplay.Service.MessageService;
 import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
@@ -19,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -27,6 +26,7 @@ import java.util.Map;
 public class AutoMatchController {
 
     private final AutoMatchService autoMatchService;
+    private final MatchQueueRepository matchQueueRepository;
 
     @Autowired(required = false)  // 선택적 주입
     private MessageService messageService;
@@ -78,6 +78,29 @@ public class AutoMatchController {
                         "timestamp", LocalDateTime.now()
                 )
         );
+    }
+
+    // 현장 자동 매칭 큐 사용자 조회 (자동 매칭용)
+    @GetMapping("/queue-users")
+    public ResponseEntity<Map<String, Object>> getAutoQueueUsersByRoom(@RequestParam Long roomId) {
+        List<MatchQueueEntry> entries = matchQueueRepository
+                .findByMatchedFalseAndGameRoom_GameRoomId(roomId).stream()
+                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_LIVE_AUTO) // 자동 매칭 큐만 필터링
+                .toList();
+
+        List<Map<String, Object>> userList = entries.stream().map(entry -> {
+            NormalUser user = entry.getUser();
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("userId", user.getUserId());
+            userInfo.put("nickname", user.getNickname());
+            userInfo.put("rank", user.getRank());
+            return userInfo;
+        }).toList();
+
+        return ResponseEntity.ok(Map.of(
+                "roomId", roomId,
+                "queuedUsers", userList
+        ));
     }
 
     // 구장 자동 매칭(사전/현장 게임방 다 적용)

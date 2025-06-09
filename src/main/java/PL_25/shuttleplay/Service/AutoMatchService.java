@@ -123,7 +123,7 @@ public class AutoMatchService {
             GameRoom room = gameRoomRepository.findById(gameRoomId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 게임방을 찾을 수 없습니다."));
 
-            entry.setMatchType(MatchQueueType.QUEUE_LIVE);
+            entry.setMatchType(MatchQueueType.QUEUE_LIVE_AUTO);
             entry.setGameRoom(room);
             entry.setLocation(room.getLocation()); // 위치는 방 기준
             entry.setDate(LocalDate.now());
@@ -155,7 +155,7 @@ public class AutoMatchService {
         // 게임방에 등록된 유저 중 아직 매칭되지 않은 QUEUE_LIVE 큐 가져오기
         List<MatchQueueEntry> queue = matchQueueRepository
                 .findByMatchedFalseAndGameRoom_GameRoomId(roomId).stream()
-                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_LIVE)
+                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_LIVE_AUTO)
                 .toList();
 
         List<Long> userIds = queue.stream()
