@@ -203,4 +203,12 @@ public class GameRoomService {
 
         return gameRoomRepository.findByLocation(location);
     }
+
+
+    @Transactional(readOnly = true)
+    public GameRoom selectGameRoomById(long gameRoomId) {
+
+        return gameRoomRepository.findById(gameRoomId)
+                .orElseThrow(() -> new NoSuchElementException("해당 id를 가지는 게임방은 없습니다. : " + gameRoomId));
+    }
 }
