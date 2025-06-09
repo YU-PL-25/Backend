@@ -105,7 +105,7 @@ public class ManualMatchService {
             GameRoom room = gameRoomRepository.findById(gameRoomId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 게임방을 찾을 수 없습니다."));
 
-            entry.setMatchType(MatchQueueType.QUEUE_LIVE);
+            entry.setMatchType(MatchQueueType.QUEUE_LIVE_MANUAL);
             entry.setGameRoom(room);
             entry.setLocation(room.getLocation()); // 위치는 게임방 기준
             entry.setDate(LocalDate.now());
@@ -157,7 +157,7 @@ public class ManualMatchService {
         List<MatchQueueEntry> entries = matchQueueRepository
                 .findByUser_UserIdInAndMatchedFalse(filteredUserIds)
                 .stream()
-                .filter(e -> e.getMatchType() == MatchQueueType.QUEUE_LIVE)
+                .filter(e -> e.getMatchType() == MatchQueueType.QUEUE_LIVE_MANUAL)
                 .toList();
 
         // 큐에 없는 사람이 있다면 예외 발생

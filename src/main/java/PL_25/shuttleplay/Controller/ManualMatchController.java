@@ -1,9 +1,6 @@
 package PL_25.shuttleplay.Controller;
 
-import PL_25.shuttleplay.Entity.Game.Game;
-import PL_25.shuttleplay.Entity.Game.GameRoom;
-import PL_25.shuttleplay.Entity.Game.MatchQueueEntry;
-import PL_25.shuttleplay.Entity.Game.MatchQueueResponse;
+import PL_25.shuttleplay.Entity.Game.*;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameRoomRepository;
 import PL_25.shuttleplay.Repository.MatchQueueRepository;
@@ -63,7 +60,10 @@ public class ManualMatchController {
     @GetMapping("/queue-users")
     public ResponseEntity<Map<String, Object>> getUsersInQueueByRoom(@RequestParam Long roomId) {
         // 해당 게임방 ID 기준으로 큐에서 아직 매칭되지 않은 유저 목록 조회
-        List<MatchQueueEntry> entries = matchQueueRepository.findByMatchedFalseAndGameRoom_GameRoomId(roomId);
+        List<MatchQueueEntry> entries = matchQueueRepository
+                .findByMatchedFalseAndGameRoom_GameRoomId(roomId).stream()
+                .filter(entry -> entry.getMatchType() == MatchQueueType.QUEUE_LIVE_MANUAL)
+                .toList();
 
         // 필요한 유저 정보만 추려서 반환
         List<Map<String, Object>> userList = entries.stream().map(entry -> {
