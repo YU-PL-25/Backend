@@ -1,6 +1,8 @@
 package PL_25.shuttleplay.Service;
 
+import PL_25.shuttleplay.Entity.Game.MatchQueueEntry;
 import PL_25.shuttleplay.Repository.LocationRepository;
+import PL_25.shuttleplay.Repository.MatchQueueRepository;
 import PL_25.shuttleplay.dto.Matching.CurrentMatchingGameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.PreMatchingGameRoomDTO;
 import PL_25.shuttleplay.Entity.Game.GameRoom;
@@ -9,8 +11,10 @@ import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameRoomRepository;
 import PL_25.shuttleplay.Repository.NormalUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -26,6 +30,7 @@ public class GameRoomService {
     private final GameRoomRepository gameRoomRepository;
     private final NormalUserRepository normalUserRepository;
     private final LocationRepository locationRepository;
+    private final MatchQueueRepository matchQueueRepository;
 
 
 
@@ -148,6 +153,12 @@ public class GameRoomService {
         user.setGameRoom(null);
         gameRoom.getParticipants().remove(user);
 
+        // 게임방 나갈 때 해당 유저를 대기열에서 삭제.
+        List<MatchQueueEntry> entries = matchQueueRepository.findByUser_UserIdAndMatchedFalse(userId);
+        if (!entries.isEmpty()) {
+            matchQueueRepository.deleteAll(entries);
+        }
+
         return gameRoom;
     }
 
@@ -164,6 +175,13 @@ public class GameRoomService {
             n.setGameRoom(null);
         }
 
+        // 게임방 삭제할 때 해당 게임방을 가지는 모든 유저 삭제.
+        List<MatchQueueEntry> entries = matchQueueRepository.findByGameRoom_GameRoomIdAndMatchedFalse(gameRoomId);
+        if (!entries.isEmpty()) {
+            matchQueueRepository.deleteAll(entries);
+        }
+
+        // 게임방 자체 삭제.
         gameRoomRepository.delete(gameRoom);
     }
 
