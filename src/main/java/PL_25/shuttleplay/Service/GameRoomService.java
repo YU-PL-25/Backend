@@ -49,6 +49,7 @@ public class GameRoomService {
         // 3. GameRoom 생성 (createdBy = master)
         // 프론트에서 가져온 데이터로 GameRoom 엔티티 생성.
         GameRoom gameRoom = GameRoom.builder()
+                .title(gameRoomDTO.getTitle())      // 방제 저장
                 .location(selectedLocation)
                 .date(LocalDate.now())
                 .time(LocalTime.now())
