@@ -211,6 +211,14 @@ public class GameRoomService {
     }
 
 
+    @Transactional(readOnly = true)
+    public GameRoom selectGameRoomById(long gameRoomId) {
+
+        return gameRoomRepository.findById(gameRoomId)
+                .orElseThrow(() -> new NoSuchElementException("해당 id를 가지는 게임방은 없습니다. : " + gameRoomId));
+    }
+
+  
     // 하나의 GameRoom에 속해있는 Game들을 조회
     // GameRoomDTO - 해당 gameRoomId를 가진 GameRoom에 대한 정보 제공
     // GameDTO - 해당 gameRoomId에 속해있는 Game들에 대한 정보 제공
