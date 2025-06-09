@@ -34,6 +34,9 @@ public interface MatchQueueRepository extends JpaRepository<MatchQueueEntry, Lon
     // 8. 해당 유저가 게임방 없이 동네(위치 기반) 매칭 큐에 등록되어 있는지 여부
     boolean existsByUser_UserIdAndMatchedFalseAndGameRoomIsNull(Long userId);
 
+    // 9 해당 게임방을 가지는 유저 모두 조회
+    List<MatchQueueEntry> findByGameRoom_GameRoomIdAndMatchedFalse(Long gameRoomId);
+
 }
 
 
