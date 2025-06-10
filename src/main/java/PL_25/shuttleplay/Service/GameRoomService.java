@@ -191,6 +191,9 @@ public class GameRoomService {
     public List<GameRoomDTO> selectAllGameRoom() {
         List<GameRoom> rooms = gameRoomRepository.findAll();
         return rooms.stream().map(room -> {
+            // 참가자 수 조회
+            int participantCount = normalUserRepository.countByGameRoom_GameRoomId(room.getGameRoomId());
+
             List<GameDTO> gameDTOList = room.getGameList().stream().map(game -> {
                 List<PlayerDTO> players = game.getParticipants().stream().map(p -> {
                     var user = p.getUser();
@@ -218,6 +221,7 @@ public class GameRoomService {
                     .locationName(room.getLocation().getCourtName())
                     .locationAddress(room.getLocation().getCourtAddress())
                     .games(gameDTOList)
+                    .participantCount(participantCount)
                     .build();
         }).toList();
     }
