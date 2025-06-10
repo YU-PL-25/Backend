@@ -160,7 +160,7 @@ public class GameRoomController {
 
         try {
 
-            List<GameRoom> gameRoomList = gameRoomService.selectAllGameRoom();
+            List<GameRoomDTO> gameRoomList = gameRoomService.selectAllGameRoom();
             
             response.put("status", 200);
             response.put("message", "게임방 전체 조회에 성공했습니다.");

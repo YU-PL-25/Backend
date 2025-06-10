@@ -186,12 +186,42 @@ public class GameRoomService {
     }
 
 
-    // 게임방 전체 조회
+    // 게임방 전체 조회 - dto로 반환하도록 수정
     @Transactional(readOnly = true)
-    public List<GameRoom> selectAllGameRoom() {
+    public List<GameRoomDTO> selectAllGameRoom() {
+        List<GameRoom> rooms = gameRoomRepository.findAll();
+        return rooms.stream().map(room -> {
+            List<GameDTO> gameDTOList = room.getGameList().stream().map(game -> {
+                List<PlayerDTO> players = game.getParticipants().stream().map(p -> {
+                    var user = p.getUser();
+                    return PlayerDTO.builder()
+                            .userId(user.getUserId())
+                            .nickname(user.getNickname())
+                            .rank(user.getRank().name())
+                            .build();
+                }).toList();
 
-        return gameRoomRepository.findAll();
+                return GameDTO.builder()
+                        .gameId(game.getGameId())
+                        .status(game.getStatus().name())
+                        .matchType(game.getMatchType())
+                        .date(game.getDate().toString())
+                        .time(game.getTime().toString())
+                        .players(players)
+                        .build();
+            }).toList();
+
+            return GameRoomDTO.builder()
+                    .gameRoomId(room.getGameRoomId())
+                    .managerId(room.getCreatedBy().getUserId())
+                    .title(room.getTitle())
+                    .locationName(room.getLocation().getCourtName())
+                    .locationAddress(room.getLocation().getCourtAddress())
+                    .games(gameDTOList)
+                    .build();
+        }).toList();
     }
+
 
 
     // 같은 구장에 있는 게임방 조회
