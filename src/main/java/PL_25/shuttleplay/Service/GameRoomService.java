@@ -201,7 +201,7 @@ public class GameRoomService {
                             .userId(user.getUserId())
                             .nickname(user.getNickname())
                             .rank(user.getRank().name())
-                            .team(p.getTeam() != null ? p.getTeam().name() : null)
+//                            .team(p.getTeam() != null ? p.getTeam().name() : null)
                             .build();
                 }).toList();
 
@@ -265,6 +265,7 @@ public class GameRoomService {
                                         .userId(user.getUserId())
                                         .nickname(user.getNickname())
                                         .rank(user.getRank().name())
+                                        .team(p.getTeam() != null ? p.getTeam().name() : null)
                                         .build();
                             })
                             .toList();
