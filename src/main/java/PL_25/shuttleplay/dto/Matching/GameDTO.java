@@ -2,10 +2,12 @@ package PL_25.shuttleplay.dto.Matching;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
 @Getter
+@Setter
 @Builder
 public class GameDTO {
     private Long gameId;

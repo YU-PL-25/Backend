@@ -6,6 +6,8 @@ import PL_25.shuttleplay.Repository.GameRoomRepository;
 import PL_25.shuttleplay.Repository.MatchQueueRepository;
 import PL_25.shuttleplay.Repository.NormalUserRepository;
 import PL_25.shuttleplay.Service.ManualMatchService;
+import PL_25.shuttleplay.dto.Matching.GameDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -97,16 +99,13 @@ public class ManualMatchController {
         GameRoom room = manualMatchService.getGameRoomById(roomId);
 
         // 수동 매칭 실행 (requesterId를 통해 방장인지 검증)
-        Game game = manualMatchService.createLiveGameFromRoom(room, userIds, requesterId);
+        GameDTO gameDto = manualMatchService.createLiveGameFromRoomDto(room, userIds, requesterId);
 
         // 응답 반환 (현재 시각 기준 경기 생성, managerId 포함)
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
-                "gameId", game.getGameId(),
-                "userIds", userIds,
-                "managerId", requesterId,
-                "date", game.getDate(),
-                "time", game.getTime()
+                "game", gameDto,
+                "managerId", requesterId
         ));
     }
 
@@ -116,12 +115,12 @@ public class ManualMatchController {
     public ResponseEntity<Map<String, Object>> createLocationRoom(@RequestParam Long userId,
                                                                    @RequestBody ManualMatchRequest request) {
         // 매칭 큐 등록 + 주변 게임방 조회 통합 처리
-        List<GameRoom> nearbyRooms = manualMatchService.registerQueueAndFindNearbyRooms(userId, request);
+        List<GameRoomDTO> rooms = manualMatchService.registerQueueAndFindNearbyRoomsDto(userId, request);
 
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 큐 등록 및 주변 게임방 조회 완료",
                 "userId", userId,
-                "rooms", nearbyRooms
+                "rooms", rooms
         ));
     }
 
@@ -165,15 +164,11 @@ public class ManualMatchController {
     public ResponseEntity<Map<String, Object>> createLocationRoom(@RequestParam Long userId) {
 
         // 매칭 큐에서 사용자 정보 기반으로 게임방 생성
-        GameRoom room = manualMatchService.createGameRoomForOneUser(userId);
+        GameRoomDTO roomDto = manualMatchService.createGameRoomForOneUserDto(userId);
 
         return ResponseEntity.ok(Map.of(
                 "message", "큐 기반 게임방 생성 완료",
-                "gameRoomId", room.getGameRoomId(),
-                "userId", userId,
-                "location", room.getLocation(),
-                "date", room.getDate(),
-                "time", room.getTime()
+                "room", roomDto
         ));
     }
 
@@ -183,12 +178,12 @@ public class ManualMatchController {
     public ResponseEntity<Map<String, Object>> createGymRoom(@RequestParam Long userId,
                                                               @RequestBody ManualMatchRequest request) {
         // 매칭 큐 등록 + 동일 구장 게임방 조회 통합 처리
-        List<GameRoom> sameGymRooms = manualMatchService.registerQueueAndFindMatchingRooms(userId, request);
+        List<GameRoomDTO> rooms = manualMatchService.registerQueueAndFindMatchingRoomsDto(userId, request);
 
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 큐 등록 및 동일 구장 게임방 조회 완료",
                 "userId", userId,
-                "rooms", sameGymRooms
+                "rooms", rooms
         ));
     }
 
@@ -233,15 +228,11 @@ public class ManualMatchController {
     public ResponseEntity<Map<String, Object>> createGymRoom(@RequestParam Long userId) {
 
         // 매칭 큐에서 사용자 정보 기반으로 게임방 생성 (구장 정보 기반)
-        GameRoom room = manualMatchService.createGameRoomForOneUser(userId);
+        GameRoomDTO roomDto = manualMatchService.createGameRoomForOneUserDto(userId);
 
         return ResponseEntity.ok(Map.of(
                 "message", "큐 기반 구장 게임방 생성 완료",
-                "gameRoomId", room.getGameRoomId(),
-                "userId", userId,
-                "location", room.getLocation(),
-                "date", room.getDate(),
-                "time", room.getTime()
+                "room", roomDto
         ));
     }
 }

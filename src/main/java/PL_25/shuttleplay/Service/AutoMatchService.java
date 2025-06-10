@@ -9,6 +9,9 @@ import PL_25.shuttleplay.Entity.User.Profile;
 import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
 import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
+import PL_25.shuttleplay.dto.Matching.GameDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
+import PL_25.shuttleplay.dto.Matching.PlayerDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -227,6 +230,35 @@ public class AutoMatchService {
 
         return null;
     }
+    // dto 써서 응답
+    @Transactional
+    public GameDTO matchLiveCourtFromRoomDto(Long roomId) {
+        Game game = matchLiveCourtFromRoom(roomId); // 기존 로직 그대로 재사용
+
+        if (game == null) return null;
+
+        // GameParticipant → PlayerDTO 변환
+        List<PlayerDTO> players = game.getParticipants().stream()
+                .map(participant -> {
+                    NormalUser user = participant.getUser();
+                    return PlayerDTO.builder()
+                            .userId(user.getUserId())
+                            .nickname(user.getNickname())
+                            .rank(String.valueOf(user.getRank()))
+                            .build();
+                })
+                .toList();
+
+        // GameDTO 변환
+        return GameDTO.builder()
+                .gameId(game.getGameId())
+                .matchType(game.getMatchType())
+                .status(game.getStatus().name())
+                .date(game.getDate().toString())
+                .time(game.getTime().toString())
+                .players(players)
+                .build();
+    }
 
 
     // 사전 매칭 (동네 기준) - 큐에 등록된 정보만으로 자동 매칭 및 게임방 생성
@@ -294,6 +326,22 @@ public class AutoMatchService {
         return null;
     }
 
+    @Transactional
+    public GameRoomDTO createPreLocationMeetingRoomDto(Long userId) {
+        GameRoom room = createPreLocationMeetingRoomFromUser(userId);
+        if (room == null) return null;
+
+        return GameRoomDTO.builder()
+                .gameRoomId(room.getGameRoomId())
+                .managerId(room.getCreatedBy() != null ? room.getCreatedBy().getUserId() : null)
+                .title(room.getTitle())
+                .locationName(room.getLocation().getCourtName())
+                .locationAddress(room.getLocation().getCourtAddress())
+                .games(room.getGameList().stream().map(this::convertToGameDto).toList())
+                .build();
+    }
+
+
     // 사전 매칭 (구장 기준) - 큐에 등록된 정보만으로 게임방 자동 생성
     public GameRoom createPreGymMeetingRoomFromUser(Long userId) {
         // 1. userId로 큐에서 사전 매칭 등록 정보 찾기
@@ -358,6 +406,42 @@ public class AutoMatchService {
 
         // 매칭 실패 시 null 반환
         return null;
+    }
+
+    @Transactional
+    public GameRoomDTO createPreGymMeetingRoomDto(Long userId) {
+        GameRoom room = createPreGymMeetingRoomFromUser(userId);
+        if (room == null) return null;
+
+        return GameRoomDTO.builder()
+                .gameRoomId(room.getGameRoomId())
+                .managerId(room.getCreatedBy() != null ? room.getCreatedBy().getUserId() : null)
+                .title(room.getTitle())
+                .locationName(room.getLocation().getCourtName())
+                .locationAddress(room.getLocation().getCourtAddress())
+                .games(room.getGameList().stream().map(this::convertToGameDto).toList())
+                .build();
+    }
+
+    private GameDTO convertToGameDto(Game game) {
+        List<PlayerDTO> players = game.getParticipants().stream()
+                .map(p -> {
+                    NormalUser u = p.getUser();
+                    return PlayerDTO.builder()
+                            .userId(u.getUserId())
+                            .nickname(u.getNickname())
+                            .rank(String.valueOf(u.getRank()))
+                            .build();
+                }).toList();
+
+        return GameDTO.builder()
+                .gameId(game.getGameId())
+                .matchType(game.getMatchType())
+                .status(game.getStatus().name())
+                .date(game.getDate().toString())
+                .time(game.getTime().toString())
+                .players(players)
+                .build();
     }
 
     // 구장 위치가 같은지 확인 (이름 + 주소 + 좌표는 허용 오차 내일 때)

@@ -6,6 +6,8 @@ import PL_25.shuttleplay.Repository.MatchQueueRepository;
 import PL_25.shuttleplay.Service.AutoMatchService;
 import PL_25.shuttleplay.Service.MessageService;
 import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
+import PL_25.shuttleplay.dto.Matching.GameDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,7 +109,9 @@ public class AutoMatchController {
     @PostMapping("/games/{roomId}")
     public ResponseEntity<Map<String, Object>> matchLiveInRoom(@PathVariable Long roomId) {
         Game game = autoMatchService.matchLiveCourtFromRoom(roomId);
-        if (game == null) {
+        GameDTO gameDto = autoMatchService.matchLiveCourtFromRoomDto(roomId);  // DTO 사용
+
+        if (gameDto == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
 
@@ -127,53 +131,37 @@ public class AutoMatchController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "매칭 되었습니다.",
-                "gameId", game.getGameId(),
-                "userIds", game.getParticipants().stream()
-                                .map(p -> p.getUser().getUserId())
-                                .toList(),
-                "date", game.getDate(),
-                "time", game.getTime()
+                "game", gameDto  // gameId, date, time, players 포함됨
         ));
     }
 
     // 사전 동네 매칭(자동) - 유저가 대기열에 등록한 뒤, 날짜+시간+위치(300m 이내) 조건에 맞는 유저들과 게임방 자동 생성
     @PostMapping("/rooms/location")
     public ResponseEntity<Map<String, Object>> matchPreLocation(@RequestParam Long userId) {
-        GameRoom room = autoMatchService.createPreLocationMeetingRoomFromUser(userId);
+        GameRoomDTO roomDto = autoMatchService.createPreLocationMeetingRoomDto(userId);
 
-        if (room == null) {
+        if (roomDto == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
 
-         return ResponseEntity.ok(Map.of(
+        return ResponseEntity.ok(Map.of(
                 "message", "게임방이 생성되었습니다.",
-                "gameRoomId", room.getGameRoomId(),
-                "userIds", room.getParticipants().stream().map(NormalUser::getUserId).toList(),
-                "participantCount", room.getParticipants().size(),
-                "location", room.getLocation(),
-                "date", room.getDate(),
-                "time", room.getTime()
+                "room", roomDto
         ));
     }
 
     // 사전 구장 매칭(자동) - 유저가 대기열에 등록한 뒤, 동일 구장/날짜/시간 조건에 맞는 유저들과 게임방 자동 생성
     @PostMapping("/rooms/gym")
     public ResponseEntity<Map<String, Object>> matchPreGym(@RequestParam Long userId) {
-        GameRoom room = autoMatchService.createPreGymMeetingRoomFromUser(userId);
+        GameRoomDTO roomDto = autoMatchService.createPreGymMeetingRoomDto(userId);
 
-        if (room == null) {
+        if (roomDto == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
 
-        // 매칭 성공 시 게임방 정보 응답
         return ResponseEntity.ok(Map.of(
                 "message", "게임방이 생성되었습니다.",
-                "gameRoomId", room.getGameRoomId(),
-                "userIds", room.getParticipants().stream().map(NormalUser::getUserId).toList(),
-                "participantCount", room.getParticipants().size(),
-                "location", room.getLocation(),
-                "date", room.getDate(),
-                "time", room.getTime()
+                "room", roomDto
         ));
     }
 
