@@ -1,6 +1,7 @@
 package PL_25.shuttleplay.Entity.Game;
 
 import PL_25.shuttleplay.Entity.User.NormalUser;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,6 +16,7 @@ public class GameParticipant {
     @Id
     @ManyToOne
     @JoinColumn(name = "game_id")
+    @JsonBackReference
     private Game game;
 
     @Id

@@ -2,6 +2,7 @@ package PL_25.shuttleplay.Entity.Game;
 
 import PL_25.shuttleplay.Entity.Location;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +29,7 @@ public class Game {
 
     // GameParticipant 엔티티 생성으로 매핑 수정
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<GameParticipant> participants = new ArrayList<>();
 
     private LocalDate date;

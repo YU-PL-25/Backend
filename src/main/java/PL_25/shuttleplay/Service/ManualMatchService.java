@@ -5,7 +5,10 @@ import PL_25.shuttleplay.Entity.Location;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.*;
 import PL_25.shuttleplay.Util.GeoUtil;
+import PL_25.shuttleplay.dto.Matching.GameDTO;
+import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
 import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
+import PL_25.shuttleplay.dto.Matching.PlayerDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -54,9 +57,19 @@ public class ManualMatchService {
         return registerToQueue(userId, null, request, true); // 내부 통합 메서드로 위임
     }
 
+    public List<GameRoomDTO> registerQueueAndFindNearbyRoomsDto(Long userId, ManualMatchRequest request) {
+        List<GameRoom> rooms = registerQueueAndFindNearbyRooms(userId, request);
+        return rooms.stream().map(this::convertToGameRoomDto).toList();
+    }
+
     // 현장 매칭 큐 등록용(게임)
     public MatchQueueResponse registerToQueue(Long userId, Long gameRoomId, ManualMatchRequest request) {
         return registerToQueue(userId, gameRoomId, request, false); // 내부 통합 메서드로 위임
+    }
+
+    public List<GameRoomDTO> registerQueueAndFindMatchingRoomsDto(Long userId, ManualMatchRequest request) {
+        List<GameRoom> rooms = registerQueueAndFindMatchingRooms(userId, request);
+        return rooms.stream().map(this::convertToGameRoomDto).toList();
     }
 
     // 매칭 큐 등록 내부 통합 처리 메서드 (gameRoomId는 현장 매칭일 때만 사용됨)
@@ -204,6 +217,32 @@ public class ManualMatchService {
         return savedGame;
     }
 
+    @Transactional
+    public GameDTO createLiveGameFromRoomDto(GameRoom room, List<Long> userIds, Long requesterId) {
+        Game game = createLiveGameFromRoom(room, userIds, requesterId);
+        if (game == null) return null;
+
+        List<PlayerDTO> players = game.getParticipants().stream()
+                .map(p -> {
+                    NormalUser u = p.getUser();
+                    return PlayerDTO.builder()
+                            .userId(u.getUserId())
+                            .nickname(u.getNickname())
+                            .rank(String.valueOf(u.getRank()))
+                            .build();
+                }).toList();
+
+        return GameDTO.builder()
+                .gameId(game.getGameId())
+                .matchType(game.getMatchType())
+                .status(game.getStatus().name())
+                .date(game.getDate().toString())
+                .time(game.getTime().toString())
+                .players(players)
+                .build();
+    }
+
+
     // 사전 수동 매칭(동네 기반) - 사용자가 입력한 위치/날짜/시간을 기준으로 큐 등록 + 300m 이내 게임방 조회
     public List<GameRoom> registerQueueAndFindNearbyRooms(Long userId, ManualMatchRequest request) {
         // 매칭 큐 등록
@@ -300,5 +339,53 @@ public class ManualMatchService {
 
         return savedRoom;
     }
+
+    public GameRoomDTO createGameRoomForOneUserDto(Long userId) {
+        GameRoom room = createGameRoomForOneUser(userId);
+        if (room == null) return null;
+
+        return GameRoomDTO.builder()
+                .gameRoomId(room.getGameRoomId())
+                .managerId(room.getCreatedBy() != null ? room.getCreatedBy().getUserId() : null)
+                .title(room.getTitle())
+                .locationName(room.getLocation().getCourtName())
+                .locationAddress(room.getLocation().getCourtAddress())
+                .games(room.getGameList().stream().map(this::convertToGameDto).toList())
+                .build();
+    }
+
+    private GameDTO convertToGameDto(Game game) {
+        List<PlayerDTO> players = game.getParticipants().stream()
+                .map(p -> {
+                    NormalUser u = p.getUser();
+                    return PlayerDTO.builder()
+                            .userId(u.getUserId())
+                            .nickname(u.getNickname())
+                            .rank(String.valueOf(u.getRank()))
+                            .build();
+                }).toList();
+
+        return GameDTO.builder()
+                .gameId(game.getGameId())
+                .matchType(game.getMatchType())
+                .status(game.getStatus().name())
+                .date(game.getDate().toString())
+                .time(game.getTime().toString())
+                .players(players)
+                .build();
+    }
+
+
+    private GameRoomDTO convertToGameRoomDto(GameRoom room) {
+        return GameRoomDTO.builder()
+                .gameRoomId(room.getGameRoomId())
+                .managerId(room.getCreatedBy() != null ? room.getCreatedBy().getUserId() : null)
+                .title(room.getTitle())
+                .locationName(room.getLocation().getCourtName())
+                .locationAddress(room.getLocation().getCourtAddress())
+                .games(room.getGameList().stream().map(this::convertToGameDto).toList())
+                .build();
+    }
+
 
 }
