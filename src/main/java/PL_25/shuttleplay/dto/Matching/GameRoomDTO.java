@@ -14,5 +14,5 @@ public class GameRoomDTO {
     private String locationName;    // 장소 이름 (ex: ~~센터)
     private String locationAddress; // 장소 주소 (ex: 경산시 압량읍 ~~)
     private List<GameDTO> games;  // 해당 게임방의 게임 리스트
-
+    private int participantCount; // 게임방 참여 인원수
 }
