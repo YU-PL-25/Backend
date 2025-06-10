@@ -5,10 +5,7 @@ import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.MatchQueueRepository;
 import PL_25.shuttleplay.Service.AutoMatchService;
 import PL_25.shuttleplay.Service.MessageService;
-import PL_25.shuttleplay.dto.Matching.AutoMatchRequest;
-import PL_25.shuttleplay.dto.Matching.GameDTO;
-import PL_25.shuttleplay.dto.Matching.GameRoomDTO;
-import PL_25.shuttleplay.dto.Matching.ManualMatchRequest;
+import PL_25.shuttleplay.dto.Matching.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -108,12 +105,14 @@ public class AutoMatchController {
     // 구장 자동 매칭(사전/현장 게임방 다 적용)
     @PostMapping("/games/{roomId}")
     public ResponseEntity<Map<String, Object>> matchLiveInRoom(@PathVariable Long roomId) {
-        Game game = autoMatchService.matchLiveCourtFromRoom(roomId);
-        GameDTO gameDto = autoMatchService.matchLiveCourtFromRoomDto(roomId);  // DTO 사용
+        Game game = autoMatchService.matchLiveCourtFromRoom(roomId);  // ✅ 매칭 시도 + 저장
 
-        if (gameDto == null) {
+        if (game == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "매칭 조건에 맞는 사용자가 부족합니다.");
         }
+
+        // game으로 직접 DTO 생성
+        GameDTO gameDto = convertToGameDto(game);
 
         // 매칭 완료하여 Game 생성 시, 해당 userId 에게 문자 보내기 (API 키 필요)
         // messageService가 null이 아닐 때, messageEnabled가 활성화 되어있을때 만 문자 전송
@@ -133,6 +132,27 @@ public class AutoMatchController {
                 "message", "매칭 되었습니다.",
                 "game", gameDto  // gameId, date, time, players 포함됨
         ));
+    }
+
+    private GameDTO convertToGameDto(Game game) {
+        List<PlayerDTO> players = game.getParticipants().stream()
+                .map(p -> {
+                    NormalUser u = p.getUser();
+                    return PlayerDTO.builder()
+                            .userId(u.getUserId())
+                            .nickname(u.getNickname())
+                            .rank(String.valueOf(u.getRank()))
+                            .build();
+                }).toList();
+
+        return GameDTO.builder()
+                .gameId(game.getGameId())
+                .matchType(game.getMatchType())
+                .status(game.getStatus().name())
+                .date(game.getDate().toString())
+                .time(game.getTime().toString())
+                .players(players)
+                .build();
     }
 
     // 사전 동네 매칭(자동) - 유저가 대기열에 등록한 뒤, 날짜+시간+위치(300m 이내) 조건에 맞는 유저들과 게임방 자동 생성
