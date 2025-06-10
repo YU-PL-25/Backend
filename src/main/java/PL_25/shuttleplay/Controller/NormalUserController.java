@@ -5,6 +5,7 @@ import PL_25.shuttleplay.Entity.Game.GameHistory;
 import PL_25.shuttleplay.Entity.User.NormalUser;
 import PL_25.shuttleplay.Repository.GameHistoryRepository;
 import PL_25.shuttleplay.Service.NormalUserService;
+import PL_25.shuttleplay.dto.MyInfoResponseDTO;
 import PL_25.shuttleplay.dto.UserRegisterDTO;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -25,14 +26,33 @@ public class NormalUserController {
         return normalUserService.createUser(registerDTO);
     }
 
-    // 사용자 개인정보 조회
+    // 사용자 개인정보 조회 - dto로 반환하도록 수정
     @GetMapping("/myinfo")
-    public NormalUser getMyInfo(HttpSession session) {
+    public MyInfoResponseDTO getMyInfo(HttpSession session) {
         Long userId = (Long) session.getAttribute("loginUser");
         if (userId == null) {
             throw new RuntimeException("로그인 세션이 존재하지 않습니다.");
         }
-        return normalUserService.findUserById(userId);
+
+        NormalUser user = normalUserService.findUserById(userId);
+
+        return MyInfoResponseDTO.builder()
+                .userId(user.getUserId())
+                .name(user.getName())
+                .nickname(user.getNickname())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .gender(user.getGender())
+                .role(user.getRole())
+                .rank(user.getRank().name())
+                .rating(user.getMmr() != null ? user.getMmr().getRating() : 0)
+                .gamesPlayed(user.getMmr() != null ? user.getMmr().getGamesPlayed() : 0)
+                .winsCount(user.getMmr() != null ? user.getMmr().getWinsCount() : 0)
+                .winRate(user.getMmr() != null ? user.getMmr().getWinRate() : 0)
+                .ageGroup(user.getProfile() != null ? user.getProfile().getAgeGroup() : "미등록")
+                .playStyle(user.getProfile() != null ? user.getProfile().getPlayStyle() : "미등록")
+                .gameType(user.getProfile() != null ? user.getProfile().getGameType() : "미등록")
+                .build();
     }
 
     @GetMapping("/{userId}/game-history")
