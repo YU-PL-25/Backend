@@ -8,6 +8,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 // 게임방(=대기방) 을 의미하는 클래스, 이 안에 Game 객체가 여러개 들어간다. Game은 경기 1개에 해당
@@ -28,9 +29,9 @@ public class GameRoom {
     @JsonManagedReference
     private List<NormalUser> participants;
 
-    @OneToMany(mappedBy = "gameRoom")
+    @OneToMany(mappedBy = "gameRoom", cascade = CascadeType.ALL)
     @JsonManagedReference("gameRoom-gameList")
-    private List<Game> gameList;
+    private List<Game> gameList = new ArrayList<>();
 
     @ManyToOne(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "location_id")
