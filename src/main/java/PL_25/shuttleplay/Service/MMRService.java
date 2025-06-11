@@ -29,8 +29,15 @@ public class MMRService {
     public void updateMmr(NormalUser user, NormalUser opponent, GameHistory gameHistory) {
         MMR userMMR = user.getMmr();
         MMR oppMMR = opponent.getMmr();
+        // ✅ user가 A팀인지 B팀인지 판단
+        boolean userIsTeamA = gameHistory.getGame().getParticipants().stream()
+                .filter(p -> p.getUser().getUserId().equals(user.getUserId()))
+                .findFirst()
+                .map(p -> p.getTeam() == TeamType.TEAM_A)
+                .orElseThrow(() -> new IllegalArgumentException("유저의 팀 정보를 찾을 수 없습니다."));
 
-        boolean didWin = gameHistory.getScoreTeamA() > gameHistory.getScoreTeamB();
+        boolean didWin = (userIsTeamA && gameHistory.getScoreTeamA() > gameHistory.getScoreTeamB()) ||
+                (!userIsTeamA && gameHistory.getScoreTeamB() > gameHistory.getScoreTeamA());
 
         int userRating = userMMR.getRating();
         int oppRating = oppMMR.getRating();
@@ -47,6 +54,7 @@ public class MMRService {
 
         double newWinRate = (double) userMMR.getWinsCount() / userMMR.getGamesPlayed();
         userMMR.setWinRate(newWinRate);
+
     }
 
     // 복식 계산 시 각 팀원에게 적용할 메소드 (오버로딩)
