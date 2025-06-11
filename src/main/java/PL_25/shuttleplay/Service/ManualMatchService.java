@@ -245,17 +245,36 @@ public class ManualMatchService {
 
     // 사전 수동 매칭(동네 기반) - 사용자가 입력한 위치/날짜/시간을 기준으로 큐 등록 + 300m 이내 게임방 조회
     public List<GameRoom> registerQueueAndFindNearbyRooms(Long userId, ManualMatchRequest request) {
-        // 매칭 큐 등록
-        registerToQueue(userId, request);
-
         Location loc = request.getLocation();
+        LocalDate date = request.getDate();
+        LocalTime time = request.getTime();
 
-        return gameRoomRepository.findByDateAndTime(request.getDate(), request.getTime()).stream()
+        // 이미 해당 조건으로 사전 수동 매칭 큐에 등록되어 있는지 확인
+        boolean alreadyRegistered = matchQueueRepository
+                .findByUser_UserIdAndMatchedFalseAndMatchType(userId, MatchQueueType.QUEUE_PRE)
+                .stream()
+                .anyMatch(entry -> {
+                    Location entryLoc = entry.getLocation();
+                    return entryLoc != null
+                            && loc != null
+                            && entryLoc.getLatitude() == loc.getLatitude()
+                            && entryLoc.getLongitude() == loc.getLongitude()
+                            && safeEquals(entryLoc.getCourtName(), loc.getCourtName())
+                            && safeEquals(entryLoc.getCourtAddress(), loc.getCourtAddress())
+                            && date.equals(entry.getDate())
+                            && time.equals(entry.getTime());
+                });
+
+        if (!alreadyRegistered) {
+            registerToQueue(userId, request);
+        }
+
+        // 위치 기반 300m 이내 게임방 필터링
+        return gameRoomRepository.findByDateAndTime(date, time).stream()
                 .filter(room -> {
                     Location roomLoc = room.getLocation();
                     if (roomLoc == null || loc == null) return false;
 
-                    // 거리 계산
                     double distance = GeoUtil.calculateDistance(
                             loc.getLatitude(), loc.getLongitude(),
                             roomLoc.getLatitude(), roomLoc.getLongitude()
@@ -266,25 +285,51 @@ public class ManualMatchService {
                 .toList();
     }
 
+
     // 사전 수동 매칭(구장 기반) - 사용자가 입력한 위치/날짜/시간을 기준으로 큐 등록 + 동일 구장 게임방 조회
     public List<GameRoom> registerQueueAndFindMatchingRooms(Long userId, ManualMatchRequest request) {
-        // 매칭 큐 등록
-        registerToQueue(userId, request);
-
         Location reqLoc = request.getLocation();
+        LocalDate date = request.getDate();
+        LocalTime time = request.getTime();
+
         double latThreshold = 0.001;   // 약 ±100m 오차 허용
         double lonThreshold = 0.001;
 
-        return gameRoomRepository.findByDateAndTime(request.getDate(), request.getTime()).stream()
+        // 기존에 동일한 조건으로 등록된 큐가 있는지 확인
+        boolean alreadyRegistered = matchQueueRepository
+                .findByUser_UserIdAndMatchedFalseAndMatchType(userId, MatchQueueType.QUEUE_PRE)
+                .stream()
+                .anyMatch(entry -> {
+                    Location entryLoc = entry.getLocation();
+                    if (entryLoc == null || reqLoc == null) return false;
+
+                    boolean nameMatch = safeEquals(entryLoc.getCourtName(), reqLoc.getCourtName());
+                    boolean addressMatch = safeEquals(entryLoc.getCourtAddress(), reqLoc.getCourtAddress());
+                    boolean dateMatch = date.equals(entry.getDate());
+                    boolean timeMatch = time.equals(entry.getTime());
+
+                    double latDiff = Math.abs(entryLoc.getLatitude() - reqLoc.getLatitude());
+                    double lonDiff = Math.abs(entryLoc.getLongitude() - reqLoc.getLongitude());
+
+                    boolean coordMatch = latDiff <= latThreshold && lonDiff <= lonThreshold;
+
+                    return nameMatch && addressMatch && dateMatch && timeMatch && coordMatch;
+                });
+
+        // 등록 안 돼 있으면 등록
+        if (!alreadyRegistered) {
+            registerToQueue(userId, request);
+        }
+
+        // 동일 구장 + 좌표 오차 허용 범위 내 게임방 필터링
+        return gameRoomRepository.findByDateAndTime(date, time).stream()
                 .filter(room -> {
                     Location roomLoc = room.getLocation();
-
-                    // null-safe 비교
                     if (roomLoc == null || reqLoc == null) return false;
+
                     if (!safeEquals(roomLoc.getCourtName(), reqLoc.getCourtName())) return false;
                     if (!safeEquals(roomLoc.getCourtAddress(), reqLoc.getCourtAddress())) return false;
 
-                    // 좌표는 일정 오차 범위 내 허용
                     double latDiff = Math.abs(roomLoc.getLatitude() - reqLoc.getLatitude());
                     double lonDiff = Math.abs(roomLoc.getLongitude() - reqLoc.getLongitude());
 

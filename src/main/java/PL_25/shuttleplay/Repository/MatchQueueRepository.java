@@ -5,6 +5,7 @@ import PL_25.shuttleplay.Entity.Game.MatchQueueType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -37,6 +38,7 @@ public interface MatchQueueRepository extends JpaRepository<MatchQueueEntry, Lon
     // 9 해당 게임방을 가지는 유저 모두 조회
     List<MatchQueueEntry> findByGameRoom_GameRoomIdAndMatchedFalse(Long gameRoomId);
 
+    List<MatchQueueEntry> findByUser_UserIdAndMatchedFalseAndMatchType(Long userId, MatchQueueType matchQueueType);
 }
 
 
